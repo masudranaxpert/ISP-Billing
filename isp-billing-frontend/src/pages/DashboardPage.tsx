@@ -20,7 +20,6 @@ import {
     Loader2,
     Users,
     DollarSign,
-    Wifi,
     FileText,
     AlertCircle,
     UserCheck,
