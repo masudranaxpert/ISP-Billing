@@ -155,6 +155,7 @@ credentials.json
 # MikroTik router backups (if any)
 router_backups/
 *.backup
+.agent/
 
 # Reports and exports
 reports/
