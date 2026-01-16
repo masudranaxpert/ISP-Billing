@@ -346,3 +346,34 @@ export const refundService = {
         return response.data;
     }
 };
+
+export const userService = {
+    getUsers: async (params?: any) => {
+        const response = await apiClient.get('/users/', { params });
+        return response.data;
+    },
+    getUser: async (id: number) => {
+        const response = await apiClient.get(`/users/${id}/`);
+        return response.data;
+    },
+    createUser: async (data: any) => {
+        const response = await apiClient.post('/users/create/', data);
+        return response.data;
+    },
+    updateUser: async (id: number, data: any) => {
+        const response = await apiClient.patch(`/users/${id}/`, data);
+        return response.data;
+    },
+    deleteUser: async (id: number) => {
+        const response = await apiClient.delete(`/users/${id}/`);
+        return response.data;
+    },
+    getLoginHistory: async (params?: any) => {
+        const response = await apiClient.get('/login-history/', { params });
+        return response.data;
+    },
+    changePassword: async (data: any) => {
+        const response = await apiClient.post('/change-password/', data);
+        return response.data;
+    }
+};

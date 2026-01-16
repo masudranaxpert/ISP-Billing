@@ -31,6 +31,12 @@ import AddBillPage from "@/pages/billing/AddBillPage"
 import BillDetailPage from "@/pages/billing/BillDetailPage"
 import AddAdvancePaymentPage from "@/pages/billing/AddAdvancePaymentPage"
 import SettingsPage from "@/pages/SettingsPage"
+import UsersPage from "@/pages/UsersPage"
+import UserDetailPage from "@/pages/UserDetailPage"
+import AddUserPage from "@/pages/AddUserPage"
+import LoginHistoryPage from "@/pages/LoginHistoryPage"
+
+
 
 function App() {
   return (
@@ -70,6 +76,11 @@ function App() {
           <Route path="/billing/discounts/add" element={<AddDiscountPage />} />
           <Route path="/billing/refunds" element={<RefundsPage />} />
           <Route path="/billing/refunds/add" element={<AddRefundPage />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/users/create" element={<AddUserPage />} />
+          <Route path="/users/:id" element={<UserDetailPage />} />
+          <Route path="/users/:id/edit" element={<AddUserPage />} />
+          <Route path="/users/login-history" element={<LoginHistoryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Router>
