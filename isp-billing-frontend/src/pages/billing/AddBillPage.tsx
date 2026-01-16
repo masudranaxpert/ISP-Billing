@@ -21,25 +21,29 @@ export default function AddBillPage() {
     const currentDate = new Date()
     const [formData, setFormData] = useState({
         subscription: "",
-        billing_month: currentDate.getMonth() + 1, // Current month (1-12)
+        billing_month: currentDate.getMonth() + 1,
         billing_year: currentDate.getFullYear(),
-        amount: "",
-        status: "unpaid"
+        package_price: "",
+        discount: "0",
+        other_charges: "0",
+        status: "pending",
+        // Payment fields (shown only if status is paid/partial)
+        payment_amount: "",
+        payment_method: "cash",
+        transaction_id: "",
+        payment_notes: ""
     })
 
-    // Month names for display
     const monthNames = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
     ]
 
-    // Generate month options (past 6 months + current + future 11 months = 18 total)
     const getAvailableMonths = () => {
         const months = []
         const currentMonth = currentDate.getMonth() + 1
         const currentYear = currentDate.getFullYear()
 
-        // Start from 6 months ago
         let startMonth = currentMonth - 6
         let startYear = currentYear
 
@@ -48,7 +52,6 @@ export default function AddBillPage() {
             startYear = startYear - 1
         }
 
-        // Add 18 months total (6 past + current + 11 future)
         for (let i = 0; i < 18; i++) {
             let month = startMonth + i
             let year = startYear
@@ -68,15 +71,22 @@ export default function AddBillPage() {
         fetchSubscriptions()
     }, [])
 
-    // Auto-fill amount when subscription changes
     useEffect(() => {
         if (formData.subscription) {
             const sub = subscriptions.find(s => s.id.toString() === formData.subscription)
             if (sub && sub.package_price) {
-                setFormData(prev => ({ ...prev, amount: sub.package_price.toString() }))
+                setFormData(prev => ({ ...prev, package_price: sub.package_price.toString() }))
             }
         }
     }, [formData.subscription, subscriptions])
+
+    // Auto-calculate payment amount when status changes
+    useEffect(() => {
+        if (formData.status === 'paid' && formData.package_price) {
+            const total = parseFloat(formData.package_price) + parseFloat(formData.other_charges) - parseFloat(formData.discount)
+            setFormData(prev => ({ ...prev, payment_amount: total.toString() }))
+        }
+    }, [formData.status, formData.package_price, formData.other_charges, formData.discount])
 
     const fetchSubscriptions = async () => {
         try {
@@ -92,7 +102,6 @@ export default function AddBillPage() {
         setLoading(true)
 
         try {
-            // Get selected subscription to get package price
             const selectedSub = subscriptions.find(s => s.id.toString() === formData.subscription)
 
             if (!selectedSub) {
@@ -101,55 +110,67 @@ export default function AddBillPage() {
                 return
             }
 
-            const packagePrice = parseFloat(selectedSub.package_price || "0")
+            const packagePrice = parseFloat(formData.package_price)
+            const discount = parseFloat(formData.discount)
+            const otherCharges = parseFloat(formData.other_charges)
+            const totalAmount = packagePrice + otherCharges - discount
 
-            // Calculate paid_amount based on status
             let paidAmount = 0
-            if (formData.status === "paid") {
-                paidAmount = packagePrice
-            } else if (formData.status === "partial") {
-                paidAmount = parseFloat(formData.amount || "0")
+            let dueAmount = totalAmount
+            let finalStatus = formData.status
+
+            if (formData.status === 'paid') {
+                paidAmount = totalAmount
+                dueAmount = 0
+                finalStatus = 'paid'
+            } else if (formData.status === 'partial') {
+                paidAmount = parseFloat(formData.payment_amount)
+                dueAmount = totalAmount - paidAmount
+                finalStatus = 'partial'
             } else {
-                // pending
-                paidAmount = 0
+                finalStatus = 'pending'
             }
 
-            const dueAmount = packagePrice - paidAmount
-
-            await billService.createBill({
+            const billData = {
                 subscription: parseInt(formData.subscription),
                 billing_month: formData.billing_month,
                 billing_year: formData.billing_year,
-                billing_date: new Date().toISOString().split('T')[0],
                 package_price: packagePrice,
-                total_amount: packagePrice,
+                discount: discount,
+                other_charges: otherCharges,
+                total_amount: totalAmount,
                 paid_amount: paidAmount,
                 due_amount: dueAmount,
-                status: formData.status
-            })
-            toast.success("Bill created successfully")
-            navigate("/billing/bills")
-        } catch (error: any) {
-            console.error(error)
-            if (error.response?.data) {
-                const errorMsg = error.response.data.detail || error.response.data.non_field_errors?.[0] || "Failed to create bill"
-                toast.error(errorMsg)
-            } else {
-                toast.error("Failed to create bill")
+                status: finalStatus
             }
+
+            const response = await billService.createBill(billData)
+
+            // If status is paid or partial, create payment entry
+            if ((formData.status === 'paid' || formData.status === 'partial') && paidAmount > 0) {
+                await billService.addPayment(response.bill.id, {
+                    amount: paidAmount,
+                    payment_method: formData.payment_method,
+                    transaction_id: formData.transaction_id,
+                    notes: formData.payment_notes,
+                    payment_date: new Date().toISOString()
+                })
+            }
+
+            toast.success("Bill created successfully")
+            navigate("/bills")
+        } catch (error: any) {
+            toast.error(error.response?.data?.error || "Failed to create bill")
         } finally {
             setLoading(false)
         }
     }
 
-    const handleMonthYearChange = (value: string) => {
-        const [month, year] = value.split('-')
-        setFormData({
-            ...formData,
-            billing_month: parseInt(month),
-            billing_year: parseInt(year)
-        })
+    const handleChange = (field: string, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
     }
+
+    const showPaymentFields = formData.status === 'paid' || formData.status === 'partial'
 
     return (
         <SidebarProvider>
@@ -164,8 +185,8 @@ export default function AddBillPage() {
                                 <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden md:block" />
-                            <BreadcrumbItem>
-                                <BreadcrumbLink href="/billing/bills">Bills</BreadcrumbLink>
+                            <BreadcrumbItem className="hidden md:block">
+                                <BreadcrumbLink href="/bills">Bills</BreadcrumbLink>
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden md:block" />
                             <BreadcrumbItem>
@@ -174,8 +195,9 @@ export default function AddBillPage() {
                         </BreadcrumbList>
                     </Breadcrumb>
                 </header>
-                <div className="flex flex-1 flex-col gap-4 p-4 max-w-2xl mx-auto w-full">
-                    <Card>
+
+                <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+                    <Card className="mt-4 max-w-2xl mx-auto w-full">
                         <CardHeader>
                             <CardTitle>Create New Bill</CardTitle>
                             <CardDescription>Manually create a bill for a subscription</CardDescription>
@@ -183,12 +205,8 @@ export default function AddBillPage() {
                         <CardContent>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label>Subscription</Label>
-                                    <Select
-                                        value={formData.subscription}
-                                        onValueChange={(value) => setFormData({ ...formData, subscription: value })}
-                                        required
-                                    >
+                                    <Label htmlFor="subscription">Subscription *</Label>
+                                    <Select value={formData.subscription} onValueChange={(v) => handleChange('subscription', v)}>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select subscription" />
                                         </SelectTrigger>
@@ -203,11 +221,14 @@ export default function AddBillPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>Billing Month</Label>
+                                    <Label htmlFor="billing_period">Billing Period *</Label>
                                     <Select
                                         value={`${formData.billing_month}-${formData.billing_year}`}
-                                        onValueChange={handleMonthYearChange}
-                                        required
+                                        onValueChange={(v) => {
+                                            const [month, year] = v.split('-')
+                                            handleChange('billing_month', parseInt(month))
+                                            handleChange('billing_year', parseInt(year))
+                                        }}
                                     >
                                         <SelectTrigger>
                                             <SelectValue />
@@ -225,42 +246,113 @@ export default function AddBillPage() {
                                     </p>
                                 </div>
 
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="package_price">Package Price *</Label>
+                                        <Input
+                                            id="package_price"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.package_price}
+                                            onChange={(e) => handleChange('package_price', e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="other_charges">Other Charges</Label>
+                                        <Input
+                                            id="other_charges"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.other_charges}
+                                            onChange={(e) => handleChange('other_charges', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="discount">Discount</Label>
+                                        <Input
+                                            id="discount"
+                                            type="number"
+                                            step="0.01"
+                                            value={formData.discount}
+                                            onChange={(e) => handleChange('discount', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="space-y-2">
-                                    <Label>Status</Label>
-                                    <Select
-                                        value={formData.status}
-                                        onValueChange={(value) => setFormData({ ...formData, status: value })}
-                                    >
+                                    <Label htmlFor="status">Status *</Label>
+                                    <Select value={formData.status} onValueChange={(v) => handleChange('status', v)}>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select status" />
+                                            <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="paid">Paid</SelectItem>
                                             <SelectItem value="pending">Pending</SelectItem>
+                                            <SelectItem value="paid">Paid</SelectItem>
                                             <SelectItem value="partial">Partial</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                {formData.status === "partial" && (
-                                    <div className="space-y-2">
-                                        <Label>Paid Amount</Label>
-                                        <Input
-                                            type="number"
-                                            step="0.01"
-                                            required
-                                            value={formData.amount}
-                                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                                            placeholder="Amount already paid"
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            Enter the amount that has been paid (partial payment)
-                                        </p>
+                                {/* Payment Fields - Show only if status is paid or partial */}
+                                {showPaymentFields && (
+                                    <div className="border-t pt-4 mt-4 space-y-4">
+                                        <h3 className="font-semibold text-sm">Payment Details</h3>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="payment_amount">Payment Amount (৳) *</Label>
+                                            <Input
+                                                id="payment_amount"
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.payment_amount}
+                                                onChange={(e) => handleChange('payment_amount', e.target.value)}
+                                                required={showPaymentFields}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="payment_method">Payment Method *</Label>
+                                            <Select value={formData.payment_method} onValueChange={(v) => handleChange('payment_method', v)}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="cash">Cash</SelectItem>
+                                                    <SelectItem value="bkash">bKash</SelectItem>
+                                                    <SelectItem value="nagad">Nagad</SelectItem>
+                                                    <SelectItem value="rocket">Rocket</SelectItem>
+                                                    <SelectItem value="bank">Bank Transfer</SelectItem>
+                                                    <SelectItem value="card">Card</SelectItem>
+                                                    <SelectItem value="other">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="transaction_id">Transaction ID (Optional)</Label>
+                                            <Input
+                                                id="transaction_id"
+                                                value={formData.transaction_id}
+                                                onChange={(e) => handleChange('transaction_id', e.target.value)}
+                                                placeholder="Enter transaction ID"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label htmlFor="payment_notes">Payment Notes (Optional)</Label>
+                                            <Input
+                                                id="payment_notes"
+                                                value={formData.payment_notes}
+                                                onChange={(e) => handleChange('payment_notes', e.target.value)}
+                                                placeholder="Enter payment notes"
+                                            />
+                                        </div>
                                     </div>
                                 )}
 
-                                <div className="flex justify-end gap-2">
-                                    <Button type="button" variant="outline" onClick={() => navigate("/billing/bills")}>
+                                <div className="flex gap-2 pt-4">
+                                    <Button type="button" variant="outline" onClick={() => navigate("/bills")}>
                                         Cancel
                                     </Button>
                                     <Button type="submit" disabled={loading}>

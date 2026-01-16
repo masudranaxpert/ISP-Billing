@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     BillListView, BillCreateView, BillDetailView, GenerateMonthlyBillsView,
+    BillAddPaymentView,
     PaymentListView, PaymentCreateView, PaymentDetailView,
     InvoiceListView, InvoiceCreateView, InvoiceDetailView,
     AdvancePaymentListView, AdvancePaymentCreateView, AdvancePaymentDetailView,
@@ -17,6 +18,7 @@ urlpatterns = [
     path('bills/create/', BillCreateView.as_view(), name='bill_create'),
     path('bills/<int:pk>/', BillDetailView.as_view(), name='bill_detail'),
     path('bills/generate-monthly/', GenerateMonthlyBillsView.as_view(), name='bill_generate_monthly'),
+    path('bills/<int:pk>/add-payment/', BillAddPaymentView.as_view(), name='bill_add_payment'),
     
     # Payment endpoints
     path('payments/', PaymentListView.as_view(), name='payment_list'),

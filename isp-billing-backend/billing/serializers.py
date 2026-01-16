@@ -9,12 +9,15 @@ class BillSerializer(serializers.ModelSerializer):
     """
     subscription_customer = serializers.CharField(source='subscription.customer.name', read_only=True)
     subscription_package = serializers.CharField(source='subscription.package.name', read_only=True)
+    customer_name = serializers.CharField(source='subscription.customer.name', read_only=True)
+    package_name = serializers.CharField(source='subscription.package.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     class Meta:
         model = Bill
         fields = [
             'id', 'bill_number', 'subscription', 'subscription_customer', 'subscription_package',
+            'customer_name', 'package_name',
             'billing_month', 'billing_year', 'billing_date',
             'package_price', 'discount', 'other_charges', 'total_amount',
             'paid_amount', 'due_amount', 'status', 'status_display',

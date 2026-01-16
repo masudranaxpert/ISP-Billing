@@ -95,7 +95,7 @@ const data = {
       items: [
         {
           title: "Bills",
-          url: "/billing/bills",
+          url: "/bills",
         },
         {
           title: "Payments",

@@ -28,7 +28,7 @@ import RefundsPage from "@/pages/billing/RefundsPage"
 import AddDiscountPage from "@/pages/billing/AddDiscountPage"
 import AddRefundPage from "@/pages/billing/AddRefundPage"
 import AddBillPage from "@/pages/billing/AddBillPage"
-import AddPaymentPage from "@/pages/billing/AddPaymentPage"
+import BillDetailPage from "@/pages/billing/BillDetailPage"
 import AddAdvancePaymentPage from "@/pages/billing/AddAdvancePaymentPage"
 import SettingsPage from "@/pages/SettingsPage"
 
@@ -59,10 +59,10 @@ function App() {
           <Route path="/subscriptions/add" element={<AddSubscriptionPage />} />
           <Route path="/subscriptions/:id" element={<SubscriptionDetailPage />} />
           <Route path="/subscriptions/:id/edit" element={<AddSubscriptionPage />} />
-          <Route path="/billing/bills" element={<BillsPage />} />
-          <Route path="/billing/bills/add" element={<AddBillPage />} />
+          <Route path="/bills" element={<BillsPage />} />
+          <Route path="/bills/add" element={<AddBillPage />} />
+          <Route path="/bills/:id" element={<BillDetailPage />} />
           <Route path="/billing/payments" element={<PaymentsPage />} />
-          <Route path="/billing/payments/add" element={<AddPaymentPage />} />
           <Route path="/billing/invoices" element={<InvoicesPage />} />
           <Route path="/billing/advance-payments" element={<AdvancePaymentsPage />} />
           <Route path="/billing/advance-payments/add" element={<AddAdvancePaymentPage />} />

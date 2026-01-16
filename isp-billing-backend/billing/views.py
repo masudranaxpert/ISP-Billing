@@ -5,6 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 
 from .models import Bill, Payment, Invoice, AdvancePayment, Discount, Refund
 from .serializers import (
@@ -455,3 +456,59 @@ class RefundCompleteView(APIView):
             'message': 'Refund completed successfully',
             'refund': RefundSerializer(refund).data
         }, status=status.HTTP_200_OK)
+
+
+@extend_schema(tags=['Billing'])
+class BillAddPaymentView(APIView):
+    """
+    API endpoint to add payment to a specific bill
+    """
+    permission_classes = [IsAdminOrManager]
+    
+    def post(self, request, pk):
+        try:
+            bill = Bill.objects.get(pk=pk)
+        except Bill.DoesNotExist:
+            return Response({'error': 'Bill not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if bill is already fully paid
+        if bill.status == 'paid':
+            return Response({'error': 'Bill is already fully paid'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prepare payment data
+        payment_data = {
+            'bill': bill.id,
+            'amount': request.data.get('amount'),
+            'payment_method': request.data.get('payment_method'),
+            'payment_date': request.data.get('payment_date', timezone.now()),
+            'transaction_id': request.data.get('transaction_id', ''),
+            'reference_number': request.data.get('reference_number', ''),
+            'notes': request.data.get('notes', ''),
+            'status': 'completed'
+        }
+        
+        # Validate payment amount
+        amount = Decimal(str(payment_data['amount']))
+        if amount <= 0:
+            return Response({'error': 'Payment amount must be greater than 0'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if amount > bill.due_amount:
+            return Response({
+                'error': f'Payment amount (৳{amount}) cannot exceed due amount (৳{bill.due_amount})'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create payment
+        serializer = PaymentCreateSerializer(data=payment_data)
+        if serializer.is_valid():
+            payment = serializer.save(received_by=request.user)
+            
+            # Refresh bill to get updated amounts
+            bill.refresh_from_db()
+            
+            return Response({
+                'message': 'Payment added successfully',
+                'payment': PaymentSerializer(payment).data,
+                'bill': BillSerializer(bill).data
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

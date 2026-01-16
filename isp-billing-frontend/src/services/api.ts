@@ -242,6 +242,10 @@ export const billService = {
         const response = await apiClient.patch(`/bills/${id}/`, data);
         return response.data;
     },
+    addPayment: async (billId: number, data: any) => {
+        const response = await apiClient.post(`/bills/${billId}/add-payment/`, data);
+        return response.data;
+    },
     deleteBill: async (id: number) => {
         const response = await apiClient.delete(`/bills/${id}/`);
         return response.data;
