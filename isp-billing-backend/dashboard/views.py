@@ -6,6 +6,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 from decimal import Decimal
+from dateutil.relativedelta import relativedelta
 
 from customers.models import Customer, Zone
 from mikrotik.models import Package, MikroTikRouter
@@ -38,6 +39,9 @@ class DashboardOverviewView(APIView):
         active_subscriptions = Subscription.objects.filter(status='active').count()
         suspended_subscriptions = Subscription.objects.filter(status='suspended').count()
         
+        # Free Clients (Subscriptions with package price 0)
+        free_subscriptions = Subscription.objects.filter(package__price=0).count()
+        
         # Package Statistics
         total_packages = Package.objects.filter(status='active').count()
         
@@ -59,10 +63,15 @@ class DashboardOverviewView(APIView):
             due_amount=Sum('due_amount')
         )
         
-        # Bill Statistics
-        pending_bills = Bill.objects.filter(status='pending').count()
-        paid_bills = Bill.objects.filter(status='paid').count()
-        partial_bills = Bill.objects.filter(status='partial').count()
+        # Monthly Financials
+        monthly_billed_amount = current_month_bills['total_revenue'] or Decimal('0.00')
+        monthly_collected_amount = current_month_bills['paid_amount'] or Decimal('0.00')
+        monthly_due_amount = current_month_bills['due_amount'] or Decimal('0.00')
+        
+        # Bill Statistics (All time)
+        pending_bills_count = Bill.objects.filter(status='pending').count()
+        paid_bills_count = Bill.objects.filter(status='paid').count()
+        partial_bills_count = Bill.objects.filter(status='partial').count()
         
         # Payment Statistics (Current Month)
         current_month_payments = Payment.objects.filter(
@@ -84,7 +93,7 @@ class DashboardOverviewView(APIView):
         new_customers_week = Customer.objects.filter(created_at__gte=last_week).count()
         new_subscriptions_week = Subscription.objects.filter(created_at__gte=last_week).count()
         
-        # Growth Percentage (Compare with last month)
+        # Growth Percentage & Revenue History
         last_month = current_month - 1 if current_month > 1 else 12
         last_month_year = current_year if current_month > 1 else current_year - 1
         
@@ -93,12 +102,29 @@ class DashboardOverviewView(APIView):
             billing_year=last_month_year
         ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
         
-        current_revenue = current_month_bills['total_revenue'] or Decimal('0.00')
-        
         if last_month_revenue > 0:
-            revenue_growth = ((current_revenue - last_month_revenue) / last_month_revenue) * 100
+            revenue_growth = ((monthly_billed_amount - last_month_revenue) / last_month_revenue) * 100
         else:
             revenue_growth = 0
+
+        # Revenue History (Last 6 Months)
+        revenue_history = []
+        for i in range(5, -1, -1):
+            date_cursor = today - relativedelta(months=i)
+            month_start = date_cursor.replace(day=1)
+            month_name = month_start.strftime("%b")
+            month_year_num = month_start.year
+            month_num = month_start.month
+            
+            month_revenue = Bill.objects.filter(
+                billing_month=month_num,
+                billing_year=month_year_num
+            ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+            
+            revenue_history.append({
+                'name': month_name, 
+                'total': float(month_revenue)
+            })
         
         data = {
             'overview': {
@@ -113,6 +139,7 @@ class DashboardOverviewView(APIView):
                     'total': total_subscriptions,
                     'active': active_subscriptions,
                     'suspended': suspended_subscriptions,
+                    'free': free_subscriptions,
                     'new_this_week': new_subscriptions_week
                 },
                 'packages': {
@@ -127,21 +154,22 @@ class DashboardOverviewView(APIView):
                     'offline': offline_routers
                 }
             },
-            'revenue': {
-                'current_month': {
-                    'total': str(current_revenue),
-                    'paid': str(current_month_bills['paid_amount'] or Decimal('0.00')),
-                    'due': str(current_month_bills['due_amount'] or Decimal('0.00'))
+            'financials': {
+                'this_month': {
+                    'billed': str(monthly_billed_amount),
+                    'collected': str(monthly_collected_amount),
+                    'due': str(monthly_due_amount),
                 },
                 'growth_percentage': round(float(revenue_growth), 2),
                 'advance_balance': str(advance_balance)
             },
             'bills': {
-                'pending': pending_bills,
-                'paid': paid_bills,
-                'partial': partial_bills,
-                'total': pending_bills + paid_bills + partial_bills
+                'pending': pending_bills_count,
+                'paid': paid_bills_count,
+                'partial': partial_bills_count,
+                'total': pending_bills_count + paid_bills_count + partial_bills_count
             },
+            'revenue_chart': revenue_history,
             'payments': {
                 'current_month': {
                     'total_amount': str(current_month_payments['total_payments'] or Decimal('0.00')),
