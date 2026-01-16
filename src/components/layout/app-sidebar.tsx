@@ -120,6 +120,24 @@ const data = {
       ],
     },
     {
+      title: "HR",
+      icon: IconUsers,
+      items: [
+        {
+          title: "All Users",
+          url: "/users",
+        },
+        {
+          title: "Create User",
+          url: "/users/create",
+        },
+        {
+          title: "Login History",
+          url: "/users/login-history",
+        },
+      ],
+    },
+    {
       title: "Analytics",
       url: "/analytics",
       icon: IconChartBar,
