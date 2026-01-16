@@ -113,11 +113,12 @@ class MikroTikQueueProfileSerializer(serializers.ModelSerializer):
     """
     package_name = serializers.CharField(source='package.name', read_only=True)
     router_name = serializers.CharField(source='router.name', read_only=True)
+    name = serializers.CharField(source='package.mikrotik_queue_name', read_only=True)
     
     class Meta:
         model = MikroTikQueueProfile
         fields = [
-            'id', 'package', 'package_name', 'router', 'router_name',
+            'id', 'name', 'package', 'package_name', 'router', 'router_name',
             'mikrotik_queue_id', 'is_synced', 'last_synced_at',
             'sync_error', 'created_at', 'updated_at'
         ]

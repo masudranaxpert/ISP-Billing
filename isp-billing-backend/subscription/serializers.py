@@ -116,7 +116,7 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = [
             'id', 'customer_id_display', 'customer_name', 'package_name', 'package_price',
-            'start_date', 'next_billing_date', 'status', 'status_display',
+            'start_date', 'billing_day', 'next_billing_date', 'status', 'status_display',
             'router_name', 'mikrotik_username', 'framed_ip_address', 'mac_address',
             'is_synced_to_mikrotik', 'sync_error', 'created_at'
         ]

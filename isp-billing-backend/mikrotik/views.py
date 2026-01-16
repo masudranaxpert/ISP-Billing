@@ -210,27 +210,27 @@ class SyncPackageToRouterView(APIView):
         
         # Sync to router
         if queue_profile.mikrotik_queue_id:
-            # Update existing queue
-            success, result = service.update_queue_profile(package, queue_profile.mikrotik_queue_id)
-            action = 'update_queue'
+            # Update existing profile
+            success, result = service.update_ppp_profile(package, queue_profile.mikrotik_queue_id)
+            action = 'update_profile'
         else:
-            # Create new queue
-            success, result = service.create_queue_profile(package)
-            action = 'create_queue'
+            # Create new profile
+            success, result = service.create_ppp_profile(package)
+            action = 'create_profile'
         
         # Log sync operation
         MikroTikSyncLog.objects.create(
             router=router,
             action=action,
             status='success' if success else 'failed',
-            entity_type='queue',
+            entity_type='profile',
             entity_id=package.mikrotik_queue_name,
             request_data={'package_id': package.id},
             response_data=result if isinstance(result, dict) else {'message': str(result)},
             error_message=None if success else str(result)
         )
         
-        # Update queue profile
+        # Update queue profile (keeping the model name same for now, but storing profile ID)
         if success:
             queue_profile.is_synced = True
             queue_profile.last_synced_at = timezone.now()

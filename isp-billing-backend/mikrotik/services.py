@@ -248,6 +248,37 @@ class MikroTikService:
         finally:
             self.disconnect()
 
+    def update_ppp_profile(self, package, profile_id):
+        """
+        Update existing PPP Profile
+        """
+        if not self.connect():
+            return False, "Failed to connect to router"
+        
+        try:
+            profile_resource = self.api.get_resource('/ppp/profile')
+            
+            rate_limit = f"{package.bandwidth_upload}M/{package.bandwidth_download}M"
+            
+            update_data = {
+                '.id': profile_id,
+                'name': package.mikrotik_queue_name,
+                'rate-limit': rate_limit,
+            }
+            
+            # Update profile
+            profile_resource.set(**update_data)
+            
+            logger.info(f"Updated PPP profile: {package.mikrotik_queue_name}")
+            return True, "Profile updated successfully"
+            
+        except Exception as e:
+            error_msg = f"Error updating PPP profile: {str(e)}"
+            logger.error(error_msg)
+            return False, error_msg
+        finally:
+            self.disconnect()
+
     # ==================== PPPoE User Management ====================
     
     def create_pppoe_user(self, subscription, force_link=False):
