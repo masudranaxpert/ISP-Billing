@@ -21,4 +21,5 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "routeros-api>=0.21.0",
     "uvicorn>=0.40.0",
+    "whitenoise>=6.9.0",
 ]
