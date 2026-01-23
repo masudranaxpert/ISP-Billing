@@ -5,36 +5,19 @@ from .models import Package, MikroTikRouter, MikroTikQueueProfile, MikroTikSyncL
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'bandwidth_download', 'bandwidth_upload', 'price',
-        'validity_days', 'mikrotik_queue_name', 'priority', 'status', 'created_at'
+        'name', 'price', 'status', 'created_at'
     ]
     list_filter = ['status', 'created_at']
-    search_fields = ['name', 'mikrotik_queue_name']
+    search_fields = ['name']
     ordering = ['price']
-    readonly_fields = ['created_at', 'updated_at', 'speed_display']
+    readonly_fields = ['created_at', 'updated_at']
     
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'description', 'status')
         }),
-        ('Bandwidth', {
-            'fields': (
-                'bandwidth_download', 'bandwidth_upload', 'speed_display'
-            )
-        }),
         ('Pricing', {
-            'fields': ('price', 'validity_days')
-        }),
-        ('MikroTik Configuration', {
-            'fields': ('mikrotik_queue_name', 'priority')
-        }),
-        ('Burst Settings (Optional)', {
-            'fields': (
-                'burst_limit_download', 'burst_limit_upload',
-                'burst_threshold_download', 'burst_threshold_upload',
-                'burst_time'
-            ),
-            'classes': ('collapse',)
+            'fields': ('price',)
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

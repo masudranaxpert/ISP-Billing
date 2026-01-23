@@ -101,70 +101,11 @@ class SubscriptionCreateView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         subscription = serializer.save()
         
-        # Auto-sync to MikroTik
-        if subscription.router:
+        # Auto-sync to MikroTik if router and profile are selected
+        if subscription.router and subscription.mikrotik_profile_name:
             service = MikroTikService(subscription.router)
             
-            # 1. Ensure Package (Queue Profile) exists on Router
-            # Check if synced in DB first
-            queue_profile = MikroTikQueueProfile.objects.filter(
-                package=subscription.package,
-                router=subscription.router,
-                is_synced=True
-            ).first()
-            
-            # If not tracked as synced, or if we want to be safe, try to create/ensure it exists
-            # If not tracked as synced, or if we want to be safe, try to create/ensure it exists
-            if not queue_profile:
-                # Try to create queue profile first
-                q_success, q_result = service.create_queue_profile(subscription.package)
-                
-                # Log package sync
-                MikroTikSyncLog.objects.create(
-                    router=subscription.router,
-                    action='create_queue',
-                    status='success' if q_success else 'failed',
-                    entity_type='queue',
-                    entity_id=subscription.package.mikrotik_queue_name,
-                    error_message=None if q_success else str(q_result)
-                )
-
-                if q_success:
-                    # Update local tracking
-                    MikroTikQueueProfile.objects.update_or_create(
-                        package=subscription.package,
-                        router=subscription.router,
-                        defaults={
-                            'mikrotik_queue_id': q_result if isinstance(q_result, str) else '',
-                            'is_synced': True,
-                            'last_synced_at': timezone.now(),
-                            'sync_error': None
-                        }
-                    )
-                else:
-                    raise serializers.ValidationError({
-                        'mikrotik_error': f"Failed to sync package to router: {q_result}. Details: Subscription creation rolled back."
-                    })
-
-            # ALWAYS Ensure PPP Profile exists (Critical for PPPoE)
-            # Even if queue is synced, PPP profile might be missing if created by older version
-            p_success, p_result = service.create_ppp_profile(subscription.package)
-            
-            if not p_success:
-                 # Log failure but maybe don't block if it's just "already exists" which returns True now
-                 MikroTikSyncLog.objects.create(
-                    router=subscription.router,
-                    action='create_ppp_profile',
-                    status='failed',
-                    entity_type='ppp_profile',
-                    entity_id=subscription.package.mikrotik_queue_name,
-                    error_message=str(p_result)
-                )
-
-            # Small delay to ensure profile is ready
-            time.sleep(1)
-
-            # 2. Create PPPoE User
+            # Create PPPoE User with selected profile
             force_link = request.data.get('force_link', False)
             success, result = service.create_pppoe_user(subscription, force_link=force_link)
             

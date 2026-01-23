@@ -14,63 +14,11 @@ class Package(models.Model):
     
     name = models.CharField(max_length=100, unique=True)
     
-    # Bandwidth (in Mbps)
-    bandwidth_download = models.IntegerField(
-        validators=[MinValueValidator(1)],
-        help_text='Download speed in Mbps'
-    )
-    bandwidth_upload = models.IntegerField(
-        validators=[MinValueValidator(1)],
-        help_text='Upload speed in Mbps'
-    )
-    
     # Pricing
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    validity_days = models.IntegerField(default=30, help_text='Package validity in days')
     
     # Description
     description = models.TextField(blank=True, null=True)
-    
-    # MikroTik Integration
-    mikrotik_queue_name = models.CharField(
-        max_length=100,
-        unique=True,
-        help_text='MikroTik queue profile name (e.g., home-10mbps)'
-    )
-    
-    # Burst settings (optional)
-    burst_limit_download = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text='Burst download limit in Mbps (optional), Providing higher speed than the normal speed for a short period of time.'
-    )
-    burst_limit_upload = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text='Burst upload limit in Mbps (optional), Providing higher speed than the normal speed for a short period of time.'
-    )
-    burst_threshold_download = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text='Burst threshold download in Mbps (optional), The threshold at which the burst limit is activated.'
-    )
-    burst_threshold_upload = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text='Burst threshold upload in Mbps (optional), The threshold at which the burst limit is activated.'
-    )
-    burst_time = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text='Burst time in seconds (optional), The duration for which the burst limit is activated.'
-    )
-    
-    # Priority (1-8, lower is higher priority)
-    priority = models.IntegerField(
-        default=8,
-        validators=[MinValueValidator(1)],
-        help_text='Queue priority (1-8, lower is higher priority), Lower value means higher priority.'
-    )
     
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     
@@ -84,12 +32,7 @@ class Package(models.Model):
         ordering = ['price']
     
     def __str__(self):
-        return f"{self.name} - {self.bandwidth_download}Mbps - {self.price} BDT"
-    
-    @property
-    def speed_display(self):
-        """Display speed in readable format"""
-        return f"{self.bandwidth_download}/{self.bandwidth_upload} Mbps"
+        return f"{self.name} - {self.price} BDT"
 
 
 class MikroTikRouter(models.Model):

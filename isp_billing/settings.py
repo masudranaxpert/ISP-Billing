@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django_filters',
     'phonenumber_field',
     'corsheaders',
+    'django_apscheduler',
     
     # Local apps
     'accounts',
@@ -65,7 +66,8 @@ INSTALLED_APPS = [
     'subscription',
     'billing',  
     'analytics',
-    'dashboard',    
+    'dashboard',
+    'utils',
 ]
 
 MIDDLEWARE = [
