@@ -48,6 +48,8 @@ function SubscriptionsPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
+    const [editingExpiryDay, setEditingExpiryDay] = useState<number | null>(null)
+    const [expiryDayValue, setExpiryDayValue] = useState<string>("")
 
     useEffect(() => {
         fetchSubscriptions()
@@ -113,6 +115,22 @@ function SubscriptionsPage() {
             fetchSubscriptions()
         } catch (error) {
             toast.error("Failed to sync")
+        }
+    }
+
+    const handleUpdateExpiryDay = async (id: number, newDay: number) => {
+        if (newDay < 1 || newDay > 31) {
+            toast.error("Expiry day must be between 1 and 31")
+            return
+        }
+
+        try {
+            await subscriptionService.updateSubscription(id, { billing_day: newDay })
+            toast.success("Expiry day updated successfully!")
+            setEditingExpiryDay(null)
+            fetchSubscriptions()
+        } catch (error) {
+            toast.error("Failed to update expiry day")
         }
     }
 
@@ -189,7 +207,7 @@ function SubscriptionsPage() {
                                                     <TableHead>Customer</TableHead>
                                                     <TableHead>Package</TableHead>
                                                     <TableHead>Router</TableHead>
-                                                    <TableHead>Billing Day</TableHead>
+                                                    <TableHead>Expiry Day</TableHead>
                                                     <TableHead>Next Billing</TableHead>
                                                     <TableHead>Connection</TableHead>
                                                     <TableHead>MikroTik Sync</TableHead>
@@ -218,7 +236,45 @@ function SubscriptionsPage() {
                                                                 </TableCell>
                                                                 <TableCell>{sub.package_name}</TableCell>
                                                                 <TableCell>{sub.router_name || "-"}</TableCell>
-                                                                <TableCell>{sub.billing_day}</TableCell>
+                                                                <TableCell>
+                                                                    {editingExpiryDay === sub.id ? (
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Input
+                                                                                type="number"
+                                                                                min="1"
+                                                                                max="31"
+                                                                                value={expiryDayValue}
+                                                                                onChange={(e) => setExpiryDayValue(e.target.value)}
+                                                                                className="w-20"
+                                                                                autoFocus
+                                                                            />
+                                                                            <Button
+                                                                                size="sm"
+                                                                                onClick={() => handleUpdateExpiryDay(sub.id, parseInt(expiryDayValue))}
+                                                                            >
+                                                                                Save
+                                                                            </Button>
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                onClick={() => setEditingExpiryDay(null)}
+                                                                            >
+                                                                                Cancel
+                                                                            </Button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div
+                                                                            className="cursor-pointer hover:bg-accent px-2 py-1 rounded"
+                                                                            onClick={() => {
+                                                                                setEditingExpiryDay(sub.id)
+                                                                                setExpiryDayValue(sub.billing_day.toString())
+                                                                            }}
+                                                                            title="Click to edit expiry day"
+                                                                        >
+                                                                            {sub.billing_day}
+                                                                        </div>
+                                                                    )}
+                                                                </TableCell>
                                                                 <TableCell>{sub.next_billing_date || "-"}</TableCell>
                                                                 <TableCell>
                                                                     {liveStatus ? (

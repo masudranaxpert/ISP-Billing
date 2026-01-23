@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { packageService, mikrotikService } from "@/services/api"
+import { packageService } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -19,8 +19,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Loader2, Plus, Search, Eye, Pencil, Trash2, RefreshCw } from "lucide-react"
+import { Loader2, Plus, Search, Eye, Pencil, Trash2 } from "lucide-react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import {
     SidebarInset,
@@ -36,20 +35,6 @@ import {
     BreadcrumbPage,
     BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { toast } from "sonner"
 
 function PackagesPage() {
@@ -59,15 +44,9 @@ function PackagesPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
-    const [syncDialogOpen, setSyncDialogOpen] = useState(false)
-    const [selectedPackage, setSelectedPackage] = useState<any>(null)
-    const [routers, setRouters] = useState<any[]>([])
-    const [selectedRouter, setSelectedRouter] = useState("")
-    const [syncing, setSyncing] = useState(false)
 
     useEffect(() => {
         fetchPackages()
-        fetchRouters()
     }, [page, searchTerm])
 
     const fetchPackages = async () => {
@@ -88,15 +67,6 @@ function PackagesPage() {
         }
     }
 
-    const fetchRouters = async () => {
-        try {
-            const response = await mikrotikService.getRouters()
-            setRouters(response.results || [])
-        } catch (error) {
-            console.error("Failed to fetch routers", error)
-        }
-    }
-
     const handleDelete = async (id: number, name: string) => {
         if (!confirm(`Delete package "${name}"?`)) return
 
@@ -106,30 +76,6 @@ function PackagesPage() {
             fetchPackages()
         } catch (error) {
             toast.error("Failed to delete package")
-        }
-    }
-
-    const handleSyncClick = (pkg: any) => {
-        setSelectedPackage(pkg)
-        setSelectedRouter("")
-        setSyncDialogOpen(true)
-    }
-
-    const handleSync = async () => {
-        if (!selectedRouter) {
-            toast.error("Please select a router")
-            return
-        }
-
-        setSyncing(true)
-        try {
-            await mikrotikService.syncPackageToRouter(selectedPackage.id, parseInt(selectedRouter))
-            toast.success(`Package synced to router successfully!`)
-            setSyncDialogOpen(false)
-        } catch (error: any) {
-            toast.error(error.response?.data?.error || "Failed to sync package")
-        } finally {
-            setSyncing(false)
         }
     }
 
@@ -209,10 +155,7 @@ function PackagesPage() {
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Package Name</TableHead>
-                                                    <TableHead>Speed</TableHead>
                                                     <TableHead>Price</TableHead>
-                                                    <TableHead>Validity</TableHead>
-                                                    <TableHead>Synced Routers</TableHead>
                                                     <TableHead>Status</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
@@ -221,7 +164,7 @@ function PackagesPage() {
                                                 {packages.length === 0 ? (
                                                     <TableRow>
                                                         <TableCell
-                                                            colSpan={7}
+                                                            colSpan={4}
                                                             className="text-center py-8 text-muted-foreground"
                                                         >
                                                             No packages found
@@ -233,27 +176,7 @@ function PackagesPage() {
                                                             <TableCell className="font-medium">
                                                                 {pkg.name}
                                                             </TableCell>
-                                                            <TableCell>{pkg.speed_display}</TableCell>
                                                             <TableCell>৳{pkg.price}</TableCell>
-                                                            <TableCell>{pkg.validity_days} days</TableCell>
-                                                            <TableCell>
-                                                                {pkg.synced_routers && pkg.synced_routers.length > 0 ? (
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {pkg.synced_routers.map((router: any) => (
-                                                                            <Badge
-                                                                                key={router.router_id}
-                                                                                variant={router.is_synced ? "outline" : "destructive"}
-                                                                                className={`text-xs ${router.is_synced ? "border-green-500 text-green-600 bg-green-50 dark:bg-green-950/20" : ""}`}
-                                                                                title={router.is_synced ? "Synced" : `Error: ${router.sync_error}`}
-                                                                            >
-                                                                                {router.router_name}
-                                                                            </Badge>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="text-muted-foreground text-xs">Not synced</span>
-                                                                )}
-                                                            </TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
                                                                     <Switch
@@ -279,14 +202,6 @@ function PackagesPage() {
                                                                         title="Edit"
                                                                     >
                                                                         <Pencil className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => handleSyncClick(pkg)}
-                                                                        title="Sync to Router"
-                                                                    >
-                                                                        <RefreshCw className="h-4 w-4 text-blue-500" />
                                                                     </Button>
                                                                     <Button
                                                                         variant="ghost"
@@ -333,44 +248,6 @@ function PackagesPage() {
                         </CardContent>
                     </Card>
                 </div>
-
-                {/* Sync to Router Dialog */}
-                <Dialog open={syncDialogOpen} onOpenChange={setSyncDialogOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Sync Package to Router</DialogTitle>
-                            <DialogDescription>
-                                Select a MikroTik router to sync "{selectedPackage?.name}" package
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Select Router</label>
-                                <Select value={selectedRouter} onValueChange={setSelectedRouter}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Choose a router" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {routers.map((router) => (
-                                            <SelectItem key={router.id} value={router.id.toString()}>
-                                                {router.name} - {router.ip_address} {router.is_online ? "🟢" : "🔴"}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button onClick={handleSync} disabled={syncing} className="flex-1">
-                                    {syncing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Sync Package
-                                </Button>
-                                <Button variant="outline" onClick={() => setSyncDialogOpen(false)}>
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
             </SidebarInset>
         </SidebarProvider>
     )
