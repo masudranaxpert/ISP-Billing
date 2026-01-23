@@ -56,6 +56,28 @@ class Subscription(models.Model):
         related_name='subscriptions',
         help_text='Assigned MikroTik router'
     )
+    
+    # Protocol and Profile
+    PROTOCOL_CHOICES = (
+        ('pppoe', 'PPPoE'),
+        ('dhcp', 'DHCP'),
+        ('hotspot', 'Hotspot'),
+        ('static', 'Static IP'),
+    )
+    protocol = models.CharField(
+        max_length=20,
+        choices=PROTOCOL_CHOICES,
+        null=True,
+        blank=True,
+        help_text='Connection protocol'
+    )
+    mikrotik_profile_name = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text='MikroTik profile name (fetched from router)'
+    )
+    
     mikrotik_username = models.CharField(
         max_length=100,
         unique=True,

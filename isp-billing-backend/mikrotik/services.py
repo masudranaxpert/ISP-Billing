@@ -292,13 +292,29 @@ class MikroTikService:
         try:
             pppoe_resource = self.api.get_resource('/ppp/secret')
             
+            # Prepare detailed comment with customer information
+            customer = subscription.customer
+            comment_parts = [
+                f"ID: {customer.customer_id}",
+                f"Name: {customer.name}",
+                f"Phone: {customer.phone}",
+                f"Package: {subscription.package.name}",
+                f"Expiry Day: {subscription.billing_day}"
+            ]
+            
+            # Add address if available
+            if customer.address:
+                comment_parts.append(f"Address: {customer.address[:50]}")  # Limit to 50 chars
+            
+            comment = " | ".join(comment_parts)
+            
             # Prepare PPPoE user data
             user_data = {
                 'name': subscription.mikrotik_username,
                 'password': subscription.mikrotik_password,
                 'service': 'pppoe',
-                'profile': subscription.package.mikrotik_queue_name,
-                'comment': f"Customer: {subscription.customer.customer_id}"
+                'profile': subscription.mikrotik_profile_name,  # Use selected profile
+                'comment': comment
             }
             
             # Add static IP if customer has one
@@ -346,12 +362,29 @@ class MikroTikService:
         try:
             pppoe_resource = self.api.get_resource('/ppp/secret')
             
+            # Prepare detailed comment with customer information
+            customer = subscription.customer
+            comment_parts = [
+                f"ID: {customer.customer_id}",
+                f"Name: {customer.name}",
+                f"Phone: {customer.phone}",
+                f"Package: {subscription.package.name}",
+                f"Expiry Day: {subscription.billing_day}"
+            ]
+            
+            # Add address if available
+            if customer.address:
+                comment_parts.append(f"Address: {customer.address[:50]}")  # Limit to 50 chars
+            
+            comment = " | ".join(comment_parts)
+            
             # Prepare update data
             update_data = {
                 '.id': user_id,
                 'name': subscription.mikrotik_username,
                 'password': subscription.mikrotik_password,
-                'profile': subscription.package.mikrotik_queue_name,
+                'profile': subscription.mikrotik_profile_name,  # Use selected profile
+                'comment': comment
             }
             
             # Update static IP if available
@@ -470,6 +503,23 @@ class MikroTikService:
             return active_connections
         except Exception as e:
             logger.error(f"Error fetching active connections: {e}")
+            return []
+        finally:
+            self.disconnect()
+
+    def get_ppp_profiles(self):
+        """
+        Fetch all PPP profiles from router
+        """
+        if not self.connect():
+            return []
+            
+        try:
+            profile_resource = self.api.get_resource('/ppp/profile')
+            profiles = profile_resource.get()
+            return profiles
+        except Exception as e:
+            logger.error(f"Error fetching PPP profiles: {e}")
             return []
         finally:
             self.disconnect()

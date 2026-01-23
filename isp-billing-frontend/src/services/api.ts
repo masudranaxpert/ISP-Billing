@@ -135,6 +135,10 @@ export const mikrotikService = {
         const response = await apiClient.post(`/routers/${id}/test/`);
         return response.data;
     },
+    getRouterProfiles: async (id: number) => {
+        const response = await apiClient.get(`/routers/${id}/profiles/`);
+        return response.data;
+    },
 
     // Queue Profiles
     getQueueProfiles: async (params?: any) => {

@@ -3,7 +3,8 @@ from .views import (
     PackageListView, PackageCreateView, PackageDetailView,
     PackageUpdateView, PackageDeleteView,
     MikroTikRouterListView, MikroTikRouterCreateView, MikroTikRouterDetailView,
-    MikroTikRouterTestConnectionView, SyncPackageToRouterView,
+    MikroTikRouterTestConnectionView, MikroTikRouterProfilesView,
+    SyncPackageToRouterView,
     MikroTikQueueProfileListView, MikroTikSyncLogListView
 )
 
@@ -22,6 +23,7 @@ urlpatterns = [
     path('routers/create/', MikroTikRouterCreateView.as_view(), name='router_create'),
     path('routers/<int:pk>/', MikroTikRouterDetailView.as_view(), name='router_detail'),
     path('routers/<int:pk>/test/', MikroTikRouterTestConnectionView.as_view(), name='router_test'),
+    path('routers/<int:pk>/profiles/', MikroTikRouterProfilesView.as_view(), name='router_profiles'),
     
     # Queue Profile Sync endpoints
     path('sync/package/<int:package_id>/router/<int:router_id>/', SyncPackageToRouterView.as_view(), name='sync_package'),

@@ -56,7 +56,13 @@ def create_pppoe_user(api):
     name = input("Enter PPPoE username: ")
     password = input("Enter PPPoE password: ")
 
-    api(cmd="/ppp/secret/add", name=name, password=password, service="pppoe")
+    api(
+        cmd="/ppp/secret/add",
+        name=name,
+        password=password,
+        service="pppoe",
+        disabled="no"
+    )
     print(f"\n✅ PPPoE User '{name}' Created Successfully!")
 
 
@@ -65,6 +71,46 @@ def delete_pppoe_user(api):
 
     api(cmd="/ppp/secret/remove", numbers=name)
     print(f"\n🗑 PPPoE User '{name}' Removed Successfully!")
+
+
+def disable_pppoe_user(api):
+    name = input("Enter PPPoE username to DISABLE: ")
+
+    # 1️⃣ Find ALL secrets with this name
+    secrets = api(cmd="/ppp/secret/print")
+    matched = False
+
+    for s in secrets:
+        if s.get("name") == name:
+            matched = True
+            api(
+                cmd="/ppp/secret/set",
+                numbers=s[".id"],
+                disabled="yes"
+            )
+
+    if not matched:
+        print(f"❌ PPPoE User '{name}' not found!")
+        return
+
+    print(f"\n🚫 PPPoE User '{name}' Disabled (ALL secrets)!")
+
+    # 2️⃣ Remove ALL active sessions
+    active_users = api(cmd="/ppp/active/print")
+    disconnected = False
+
+    for user in active_users:
+        if user.get("name") == name:
+            api(
+                cmd="/ppp/active/remove",
+                numbers=user[".id"]
+            )
+            disconnected = True
+
+    if disconnected:
+        print(f"🔌 All active sessions disconnected for '{name}'")
+    else:
+        print("ℹ️ User was not online")
 
 
 def show_ip_list(api):
@@ -101,9 +147,10 @@ def main():
         print("4. Show Online PPPoE Users")
         print("5. Create PPPoE User")
         print("6. Delete PPPoE User")
-        print("7. Show IP Address List")
-        print("8. Show Firewall Rules")
-        print("9. Show System Info")
+        print("7. Disable PPPoE User (by username)")
+        print("8. Show IP Address List")
+        print("9. Show Firewall Rules")
+        print("10. Show System Info")
         print("0. Exit")
         print("========================")
 
@@ -122,10 +169,12 @@ def main():
         elif choice == "6":
             delete_pppoe_user(api)
         elif choice == "7":
-            show_ip_list(api)
+            disable_pppoe_user(api)
         elif choice == "8":
-            show_firewall_rules(api)
+            show_ip_list(api)
         elif choice == "9":
+            show_firewall_rules(api)
+        elif choice == "10":
             show_system_info(api)
         elif choice == "0":
             print("\n👋 Exiting... Bye!\n")

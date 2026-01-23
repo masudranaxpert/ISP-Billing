@@ -27,8 +27,8 @@ class PackageListView(generics.ListAPIView):
     permission_classes = [IsAdminOrManager]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status']
-    search_fields = ['name', 'mikrotik_queue_name']
-    ordering_fields = ['name', 'price', 'bandwidth_download', 'created_at']
+    search_fields = ['name']
+    ordering_fields = ['name', 'price', 'created_at']
     ordering = ['price']
 
 
@@ -179,6 +179,41 @@ class MikroTikRouterTestConnectionView(APIView):
                 'error': message,
                 'status': 'offline'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@extend_schema(tags=['MikroTik'])
+class MikroTikRouterProfilesView(APIView):
+    """
+    API endpoint to fetch PPP profiles from MikroTik router
+    """
+    permission_classes = [IsAdminOrManager]
+    
+    def get(self, request, pk):
+        try:
+            router = MikroTikRouter.objects.get(pk=pk)
+        except MikroTikRouter.DoesNotExist:
+            return Response({
+                'error': 'Router not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Fetch profiles
+        service = MikroTikService(router)
+        profiles = service.get_ppp_profiles()
+        
+        # Format profiles for frontend
+        formatted_profiles = []
+        for profile in profiles:
+            formatted_profiles.append({
+                'id': profile.get('.id', ''),
+                'name': profile.get('name', ''),
+                'rate_limit': profile.get('rate-limit', ''),
+                'local_address': profile.get('local-address', ''),
+                'remote_address': profile.get('remote-address', ''),
+            })
+        
+        return Response({
+            'profiles': formatted_profiles
+        }, status=status.HTTP_200_OK)
 
 
 # ==================== Queue Profile Sync Views ====================

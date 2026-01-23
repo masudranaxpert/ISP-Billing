@@ -42,18 +42,8 @@ function AddPackagePage() {
     const [loading, setLoading] = useState(false)
     const [formData, setFormData] = useState({
         name: "",
-        bandwidth_download: "",
-        bandwidth_upload: "",
         price: "",
-        validity_days: "30",
         description: "",
-        mikrotik_queue_name: "",
-        burst_limit_download: "",
-        burst_limit_upload: "",
-        burst_threshold_download: "",
-        burst_threshold_upload: "",
-        burst_time: "",
-        priority: "8",
         status: "active",
     })
 
@@ -72,18 +62,8 @@ function AddPackagePage() {
             const data = await packageService.getPackage(parseInt(id!))
             setFormData({
                 name: data.name,
-                bandwidth_download: data.bandwidth_download.toString(),
-                bandwidth_upload: data.bandwidth_upload.toString(),
                 price: data.price.toString(),
-                validity_days: data.validity_days?.toString() || "",
                 description: data.description || "",
-                mikrotik_queue_name: data.mikrotik_queue_name,
-                burst_limit_download: data.burst_limit_download?.toString() || "",
-                burst_limit_upload: data.burst_limit_upload?.toString() || "",
-                burst_threshold_download: data.burst_threshold_download?.toString() || "",
-                burst_threshold_upload: data.burst_threshold_upload?.toString() || "",
-                burst_time: data.burst_time?.toString() || "",
-                priority: data.priority.toString(),
                 status: data.status,
             })
         } catch (error) {
@@ -106,18 +86,8 @@ function AddPackagePage() {
         try {
             const payload = {
                 name: formData.name,
-                bandwidth_download: parseInt(formData.bandwidth_download),
-                bandwidth_upload: parseInt(formData.bandwidth_upload),
                 price: formData.price,
-                validity_days: formData.validity_days ? parseInt(formData.validity_days) : null,
                 description: formData.description || null,
-                mikrotik_queue_name: formData.mikrotik_queue_name,
-                burst_limit_download: formData.burst_limit_download ? parseInt(formData.burst_limit_download) : null,
-                burst_limit_upload: formData.burst_limit_upload ? parseInt(formData.burst_limit_upload) : null,
-                burst_threshold_download: formData.burst_threshold_download ? parseInt(formData.burst_threshold_download) : null,
-                burst_threshold_upload: formData.burst_threshold_upload ? parseInt(formData.burst_threshold_upload) : null,
-                burst_time: formData.burst_time ? parseInt(formData.burst_time) : null,
-                priority: parseInt(formData.priority),
                 status: formData.status,
             }
 
@@ -188,14 +158,14 @@ function AddPackagePage() {
                             <CardHeader>
                                 <CardTitle>{isEditMode ? 'Edit Package' : 'Add New Package'}</CardTitle>
                                 <CardDescription>
-                                    {isEditMode ? 'Update package details' : 'Create a new internet package with bandwidth and pricing'}
+                                    {isEditMode ? 'Update package details' : 'Create a new internet package with pricing'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleSubmit} className="space-y-6">
                                     {/* Basic Information */}
                                     <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold">Basic Information</h3>
+                                        <h3 className="text-lg font-semibold">Package Information</h3>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <Label htmlFor="name">Package Name *</Label>
@@ -204,17 +174,7 @@ function AddPackagePage() {
                                                     value={formData.name}
                                                     onChange={(e) => handleChange("name", e.target.value)}
                                                     required
-                                                    placeholder="e.g., Home 10 Mbps"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="mikrotik_queue_name">MikroTik Queue Name *</Label>
-                                                <Input
-                                                    id="mikrotik_queue_name"
-                                                    value={formData.mikrotik_queue_name}
-                                                    onChange={(e) => handleChange("mikrotik_queue_name", e.target.value)}
-                                                    required
-                                                    placeholder="e.g., home-10mbps"
+                                                    placeholder="e.g., Basic Package"
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -229,16 +189,6 @@ function AddPackagePage() {
                                                     placeholder="500.00"
                                                 />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="validity_days">Validity (Days)</Label>
-                                                <Input
-                                                    id="validity_days"
-                                                    type="number"
-                                                    value={formData.validity_days}
-                                                    onChange={(e) => handleChange("validity_days", e.target.value)}
-                                                    placeholder="30"
-                                                />
-                                            </div>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="description">Description</Label>
@@ -249,108 +199,6 @@ function AddPackagePage() {
                                                 placeholder="Package description"
                                                 rows={3}
                                             />
-                                        </div>
-                                    </div>
-
-                                    {/* Bandwidth Settings */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold">Bandwidth Settings</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="bandwidth_download">Download Speed (Mbps) *</Label>
-                                                <Input
-                                                    id="bandwidth_download"
-                                                    type="number"
-                                                    value={formData.bandwidth_download}
-                                                    onChange={(e) => handleChange("bandwidth_download", e.target.value)}
-                                                    required
-                                                    placeholder="10"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="bandwidth_upload">Upload Speed (Mbps) *</Label>
-                                                <Input
-                                                    id="bandwidth_upload"
-                                                    type="number"
-                                                    value={formData.bandwidth_upload}
-                                                    onChange={(e) => handleChange("bandwidth_upload", e.target.value)}
-                                                    required
-                                                    placeholder="5"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Burst Settings (Optional) */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-lg font-semibold">Burst Settings (Optional)</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="burst_limit_download">Burst Download Limit (Mbps)</Label>
-                                                <Input
-                                                    id="burst_limit_download"
-                                                    type="number"
-                                                    value={formData.burst_limit_download}
-                                                    onChange={(e) => handleChange("burst_limit_download", e.target.value)}
-                                                    placeholder="20"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="burst_limit_upload">Burst Upload Limit (Mbps)</Label>
-                                                <Input
-                                                    id="burst_limit_upload"
-                                                    type="number"
-                                                    value={formData.burst_limit_upload}
-                                                    onChange={(e) => handleChange("burst_limit_upload", e.target.value)}
-                                                    placeholder="10"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="burst_threshold_download">Burst Threshold Download (Mbps)</Label>
-                                                <Input
-                                                    id="burst_threshold_download"
-                                                    type="number"
-                                                    value={formData.burst_threshold_download}
-                                                    onChange={(e) => handleChange("burst_threshold_download", e.target.value)}
-                                                    placeholder="8"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="burst_threshold_upload">Burst Threshold Upload (Mbps)</Label>
-                                                <Input
-                                                    id="burst_threshold_upload"
-                                                    type="number"
-                                                    value={formData.burst_threshold_upload}
-                                                    onChange={(e) => handleChange("burst_threshold_upload", e.target.value)}
-                                                    placeholder="4"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="burst_time">Burst Time (Seconds)</Label>
-                                                <Input
-                                                    id="burst_time"
-                                                    type="number"
-                                                    value={formData.burst_time}
-                                                    onChange={(e) => handleChange("burst_time", e.target.value)}
-                                                    placeholder="10"
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor="priority">Priority (1-8, lower = higher priority) *</Label>
-                                                <Select
-                                                    value={formData.priority}
-                                                    onValueChange={(value) => handleChange("priority", value)}
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {[1, 2, 3, 4, 5, 6, 7, 8].map(p => (
-                                                            <SelectItem key={p} value={p.toString()}>{p}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
                                         </div>
                                     </div>
 

@@ -69,5 +69,5 @@ EXPOSE 8000
 # Entrypoint for migrations/collectstatic etc.
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# Default command: Gunicorn for production
-CMD ["gunicorn", "isp_billing.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# Default command: Gunicorn for production with config file
+CMD ["gunicorn", "isp_billing.wsgi:application", "--config", "gunicorn.conf.py"]

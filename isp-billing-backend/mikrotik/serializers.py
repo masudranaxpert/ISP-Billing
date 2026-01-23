@@ -6,16 +6,12 @@ class PackageSerializer(serializers.ModelSerializer):
     """
     Serializer for Package model
     """
-    speed_display = serializers.CharField(read_only=True)
     
     class Meta:
         model = Package
         fields = [
-            'id', 'name', 'bandwidth_download', 'bandwidth_upload', 'speed_display',
-            'price', 'validity_days', 'description',
-            'mikrotik_queue_name', 'burst_limit_download', 'burst_limit_upload',
-            'burst_threshold_download', 'burst_threshold_upload', 'burst_time',
-            'priority', 'status', 'created_at', 'updated_at'
+            'id', 'name', 'price', 'description',
+            'status', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
@@ -27,50 +23,19 @@ class PackageCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Package
         fields = [
-            'name', 'bandwidth_download', 'bandwidth_upload',
-            'price', 'validity_days', 'description',
-            'mikrotik_queue_name', 'burst_limit_download', 'burst_limit_upload',
-            'burst_threshold_download', 'burst_threshold_upload', 'burst_time',
-            'priority', 'status'
+            'name', 'price', 'description', 'status'
         ]
-    
-    def validate_mikrotik_queue_name(self, value):
-        """
-        Validate queue name format
-        """
-        # Queue name should be lowercase with hyphens
-        if not value.replace('-', '').replace('_', '').isalnum():
-            raise serializers.ValidationError(
-                "Queue name should only contain alphanumeric characters, hyphens, and underscores"
-            )
-        return value.lower()
 
 
 class PackageListSerializer(serializers.ModelSerializer):
     """
     Lightweight serializer for package list
     """
-    speed_display = serializers.CharField(read_only=True)
-    synced_routers = serializers.SerializerMethodField()
     
     class Meta:
         model = Package
         fields = [
-            'id', 'name', 'speed_display', 'price',
-            'validity_days', 'status', 'created_at',
-            'synced_routers'
-        ]
-
-    def get_synced_routers(self, obj):
-        # Fetch related queue profiles
-        profiles = obj.queue_profiles.all().select_related('router')
-        return [
-            {
-                'router_id': p.router.id,
-                'router_name': p.router.name,
-                'is_synced': p.is_synced,
-                'sync_error': p.sync_error
-            } for p in profiles
+            'id', 'name', 'price', 'status', 'created_at'
         ]
 
 

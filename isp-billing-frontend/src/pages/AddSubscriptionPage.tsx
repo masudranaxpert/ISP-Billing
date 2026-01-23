@@ -50,6 +50,8 @@ function AddSubscriptionPage() {
     const [customers, setCustomers] = useState<any[]>([])
     const [packages, setPackages] = useState<any[]>([])
     const [routers, setRouters] = useState<any[]>([])
+    const [profiles, setProfiles] = useState<any[]>([])
+    const [loadingProfiles, setLoadingProfiles] = useState(false)
     const [showForceLinkDialog, setShowForceLinkDialog] = useState(false)
     const [selectedPackagePrice, setSelectedPackagePrice] = useState<string>("")
     const [formData, setFormData] = useState({
@@ -59,6 +61,8 @@ function AddSubscriptionPage() {
         billing_day: "1",
         billing_start_month: new Date().toISOString().slice(0, 7) + '-01', // YYYY-MM-01 format
         router: "",
+        protocol: "",
+        mikrotik_profile_name: "",
         mikrotik_username: "",
         mikrotik_password: "",
         connection_fee: "",
@@ -105,9 +109,10 @@ function AddSubscriptionPage() {
                 billing_day: data.billing_day.toString(),
                 billing_start_month: data.billing_start_month || new Date().toISOString().slice(0, 7) + '-01',
                 router: data.router ? (data.router?.id || data.router).toString() : "",
+                protocol: data.protocol || "",
+                mikrotik_profile_name: data.mikrotik_profile_name || "",
                 mikrotik_username: data.mikrotik_username,
-                mikrotik_password: data.mikrotik_password, // Password might not be returned? If not, leave blank or handle safely.
-                // If password is not returned, we might need logic to keep existing if empty.
+                mikrotik_password: data.mikrotik_password,
                 connection_fee: data.connection_fee ? data.connection_fee.toString() : "",
                 reconnection_fee: data.reconnection_fee ? data.reconnection_fee.toString() : "",
                 status: data.status,
@@ -121,7 +126,7 @@ function AddSubscriptionPage() {
         }
     }
 
-    const handleChange = (field: string, value: string) => {
+    const handleChange = async (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
 
         // If package is being changed, update the selected package price
@@ -132,6 +137,33 @@ function AddSubscriptionPage() {
             } else {
                 setSelectedPackagePrice("")
             }
+        }
+
+        // If router is changed, reset protocol and profile
+        if (field === "router") {
+            setFormData((prev) => ({ ...prev, protocol: "", mikrotik_profile_name: "" }))
+            setProfiles([])
+        }
+
+        // If protocol is changed and router is selected, fetch profiles
+        if (field === "protocol" && formData.router) {
+            await fetchProfiles(formData.router)
+        }
+    }
+
+    const fetchProfiles = async (routerId: string) => {
+        if (!routerId) return
+
+        try {
+            setLoadingProfiles(true)
+            const response = await mikrotikService.getRouterProfiles(parseInt(routerId))
+            setProfiles(response.profiles || [])
+        } catch (error) {
+            console.error("Failed to fetch profiles", error)
+            toast.error("Failed to load MikroTik profiles")
+            setProfiles([])
+        } finally {
+            setLoadingProfiles(false)
         }
     }
 
@@ -150,6 +182,8 @@ function AddSubscriptionPage() {
                 billing_day: parseInt(formData.billing_day),
                 billing_start_month: formData.billing_start_month,
                 router: formData.router ? parseInt(formData.router) : null,
+                protocol: formData.protocol || null,
+                mikrotik_profile_name: formData.mikrotik_profile_name || null,
                 mikrotik_username: formData.mikrotik_username,
                 mikrotik_password: formData.mikrotik_password,
                 connection_fee: formData.connection_fee || null,
@@ -304,7 +338,7 @@ function AddSubscriptionPage() {
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="billing_day">Billing Day (1-31) *</Label>
+                                            <Label htmlFor="billing_day">Expiry Day (1-31) *</Label>
                                             <Input
                                                 id="billing_day"
                                                 type="number"
@@ -314,6 +348,9 @@ function AddSubscriptionPage() {
                                                 onChange={(e) => handleChange("billing_day", e.target.value)}
                                                 required
                                             />
+                                            <p className="text-xs text-muted-foreground">
+                                                Bill must be paid before this day each month
+                                            </p>
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="billing_start_month">Billing Start Month *</Label>
@@ -346,6 +383,51 @@ function AddSubscriptionPage() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                        {formData.router && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="protocol">Protocol *</Label>
+                                                <Select
+                                                    value={formData.protocol}
+                                                    onValueChange={(value) => handleChange("protocol", value)}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Select protocol" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="pppoe">PPPoE</SelectItem>
+                                                        <SelectItem value="dhcp">DHCP</SelectItem>
+                                                        <SelectItem value="hotspot">Hotspot</SelectItem>
+                                                        <SelectItem value="static">Static IP</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                        {formData.protocol && (
+                                            <div className="space-y-2">
+                                                <Label htmlFor="mikrotik_profile_name">MikroTik Profile *</Label>
+                                                <Select
+                                                    value={formData.mikrotik_profile_name}
+                                                    onValueChange={(value) => handleChange("mikrotik_profile_name", value)}
+                                                    disabled={loadingProfiles}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder={loadingProfiles ? "Loading profiles..." : "Select profile"} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {profiles.map((profile) => (
+                                                            <SelectItem key={profile.id} value={profile.name}>
+                                                                {profile.name} {profile.rate_limit && `(${profile.rate_limit})`}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                {profiles.length === 0 && !loadingProfiles && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        No profiles found on router
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             <Label htmlFor="mikrotik_username">PPPoE Username *</Label>
                                             <Input

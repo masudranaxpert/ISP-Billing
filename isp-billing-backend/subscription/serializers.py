@@ -23,7 +23,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'id', 'customer', 'customer_name', 'customer_id_display',
             'package', 'package_name', 'package_price', 'start_date', 'billing_day', 'billing_start_month',
             'next_billing_date', 'status', 'status_display',
-            'router', 'router_name', 'mikrotik_username', 'mikrotik_password',
+            'router', 'router_name', 'protocol', 'mikrotik_profile_name',
+            'mikrotik_username', 'mikrotik_password',
             'mikrotik_user_id', 'is_synced_to_mikrotik', 'last_synced_at',
             'sync_error', 'connection_fee', 'reconnection_fee',
             'framed_ip_address', 'mac_address',
@@ -48,7 +49,8 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = [
             'customer', 'package', 'start_date', 'billing_day', 'billing_start_month',
-            'router', 'mikrotik_username', 'mikrotik_password',
+            'router', 'protocol', 'mikrotik_profile_name',
+            'mikrotik_username', 'mikrotik_password',
             'connection_fee', 'reconnection_fee', 'status'
         ]
     
@@ -94,7 +96,8 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = [
-            'customer', 'package', 'billing_day', 'billing_start_month', 'router', 'status',
+            'customer', 'package', 'billing_day', 'billing_start_month',
+            'router', 'protocol', 'mikrotik_profile_name', 'status',
             'mikrotik_username', 'mikrotik_password', 'start_date',
             'connection_fee', 'reconnection_fee'
         ]
@@ -117,7 +120,8 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'customer_id_display', 'customer_name', 'package_name', 'package_price',
             'start_date', 'billing_day', 'next_billing_date', 'status', 'status_display',
-            'router_name', 'mikrotik_username', 'framed_ip_address', 'mac_address',
+            'router_name', 'protocol', 'mikrotik_profile_name',
+            'mikrotik_username', 'framed_ip_address', 'mac_address',
             'is_synced_to_mikrotik', 'sync_error', 'created_at'
         ]
 
