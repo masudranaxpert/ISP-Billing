@@ -32,7 +32,8 @@ class MikroTikService:
                 username=self.router.username,
                 password=self.router.password,
                 port=self.router.api_port,
-                plaintext_login=True
+                plaintext_login=True,
+                socket_timeout=30  # 30 second timeout
             )
             self.api = self.connection.get_api()
             

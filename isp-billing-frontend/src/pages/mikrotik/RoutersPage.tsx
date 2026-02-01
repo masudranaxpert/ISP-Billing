@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Plus, Search, Eye, Pencil, Trash2, Wifi } from "lucide-react"
+import { Loader2, Plus, Search, Eye, Pencil, Trash2 } from "lucide-react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import {
     SidebarInset,
@@ -45,10 +45,18 @@ function RoutersPage() {
     const [searchTerm, setSearchTerm] = useState("")
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
+    const [checkingStatus, setCheckingStatus] = useState<Record<number, boolean>>({})
 
     useEffect(() => {
         fetchRouters()
     }, [page, searchTerm])
+
+    // Check router status when page loads
+    useEffect(() => {
+        if (routers.length > 0) {
+            checkAllRoutersStatus()
+        }
+    }, [routers.length]) // Only when routers are first loaded
 
     const fetchRouters = async () => {
         try {
@@ -65,6 +73,34 @@ function RoutersPage() {
             toast.error("Failed to load routers")
         } finally {
             setLoading(false)
+        }
+    }
+
+    const checkAllRoutersStatus = async () => {
+        // Silently check all routers without showing toast
+        for (const router of routers) {
+            if (router.status === 'active') {
+                await checkRouterStatus(router.id)
+            }
+        }
+    }
+
+    const checkRouterStatus = async (routerId: number) => {
+        try {
+            setCheckingStatus(prev => ({ ...prev, [routerId]: true }))
+            await mikrotikService.testRouter(routerId)
+            // Refresh routers to get updated status
+            const params: any = { page }
+            if (searchTerm) {
+                params.search = searchTerm
+            }
+            const response = await mikrotikService.getRouters(params)
+            setRouters(response.results || [])
+        } catch (error) {
+            // Silently fail - don't show error toast for background checks
+            console.log(`Router ${routerId} connection check failed`)
+        } finally {
+            setCheckingStatus(prev => ({ ...prev, [routerId]: false }))
         }
     }
 
@@ -91,7 +127,18 @@ function RoutersPage() {
         }
     }
 
-    const getOnlineBadge = (isOnline: boolean) => {
+    const getOnlineBadge = (isOnline: boolean, routerId: number) => {
+        const isChecking = checkingStatus[routerId]
+
+        if (isChecking) {
+            return (
+                <Badge variant="secondary" className="gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Checking...
+                </Badge>
+            )
+        }
+
         return (
             <Badge
                 variant={isOnline ? "default" : "destructive"}
@@ -194,7 +241,7 @@ function RoutersPage() {
                                                             <TableCell>{router.ip_address}:{router.api_port || 8728}</TableCell>
                                                             <TableCell>{router.zone_name || "-"}</TableCell>
                                                             <TableCell>
-                                                                {getOnlineBadge(router.is_online)}
+                                                                {getOnlineBadge(router.is_online, router.id)}
                                                             </TableCell>
                                                             <TableCell>
                                                                 <div className="flex items-center gap-2">
@@ -226,22 +273,6 @@ function RoutersPage() {
                                                                         title="Edit"
                                                                     >
                                                                         <Pencil className="h-4 w-4" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={async () => {
-                                                                            try {
-                                                                                await mikrotikService.testRouter(router.id)
-                                                                                toast.success("Router connection test successful!")
-                                                                                fetchRouters()
-                                                                            } catch (error) {
-                                                                                toast.error("Router connection test failed")
-                                                                            }
-                                                                        }}
-                                                                        title="Test Connection"
-                                                                    >
-                                                                        <Wifi className="h-4 w-4 text-blue-500" />
                                                                     </Button>
                                                                     <Button
                                                                         variant="ghost"

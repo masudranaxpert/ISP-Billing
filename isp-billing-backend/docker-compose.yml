@@ -11,15 +11,47 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    image: isp-billing:latest
+    env_file:
+      - .env
+    command: >
+      sh -c "
+      echo 'Running database migrations...' &&
+      python manage.py migrate --noinput &&
+      echo 'Collecting static files...' &&
+      python manage.py collectstatic --noinput &&
+      echo 'Migration service completed successfully!'
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: isp-billing:latest
     env_file:
       - .env
     ports:
       - "9000:8000"
     depends_on:
-      db:
-        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  scheduler:
+    image: isp-billing:latest
+    env_file:
+      - .env
+    command: python run_scheduler.py
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+

@@ -1,5 +1,8 @@
 """
-Gunicorn configuration file
+Gunicorn configuration file for ISP Billing System
+
+Note: APScheduler runs in a separate container (scheduler service)
+      This config only handles the web workers
 """
 import os
 
@@ -15,25 +18,12 @@ loglevel = "info"
 # Worker class
 worker_class = "sync"
 
-# Preload app
+# Preload app for better performance
 preload_app = True
 
+# Timeout settings
+timeout = 120
+keepalive = 5
 
-def post_fork(server, worker):
-    """
-    Called just after a worker has been forked.
-    Start scheduler only in the first worker to avoid duplicates.
-    """
-    # Only start scheduler in worker 1
-    if worker.age == 0:  # First worker
-        try:
-            from utils.background_tasks import start_scheduler
-            import logging
-            
-            logger = logging.getLogger(__name__)
-            logger.info(f"Starting scheduler in worker {worker.pid}")
-            start_scheduler()
-            logger.info(f"Scheduler started successfully in worker {worker.pid}")
-        except Exception as e:
-            logger = logging.getLogger(__name__)
-            logger.error(f"Failed to start scheduler in worker {worker.pid}: {e}")
+# Process naming
+proc_name = "isp_billing_web"
