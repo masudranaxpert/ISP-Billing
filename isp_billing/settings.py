@@ -68,6 +68,8 @@ INSTALLED_APPS = [
     'analytics',
     'dashboard',
     'utils',
+    'schedule',
+    'zenpulse_scheduler',   
 ]
 
 MIDDLEWARE = [

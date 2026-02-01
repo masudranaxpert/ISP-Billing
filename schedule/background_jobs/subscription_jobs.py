@@ -1,31 +1,27 @@
-"""
-Background tasks for ISP Billing System
-Uses APScheduler to run periodic tasks
-"""
 import logging
 from datetime import date
 from django.utils import timezone
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-from django_apscheduler.jobstores import DjangoJobStore
-from django_apscheduler.models import DjangoJobExecution
-from django_apscheduler import util
-
 from subscription.models import Subscription
 from billing.models import Bill
 from mikrotik.services import MikroTikService
 
 logger = logging.getLogger(__name__)
 
-
 def check_and_disable_expired_subscriptions():
     """
     Check all active subscriptions and disable those with unpaid bills past expiry day
-    This task runs every hour
     
     Logic: If today's date > expiry_day, check if current month's bill is paid.
     If unpaid, disable the subscription.
     """
+    # Check if this job is enabled
+    from schedule.models import ScheduleConfig
+    config = ScheduleConfig.get_job_config('check_expired_subscriptions')
+    if not config or not config.is_enabled:
+        logger.info("Job is disabled, skipping execution")
+        # Ensure we don't proceed if disabled (safety net)
+        return
+    
     today = date.today()
     current_month = today.month
     current_year = today.year
@@ -63,7 +59,7 @@ def check_and_disable_expired_subscriptions():
                     )
                     disable_subscription(subscription, current_bill)
                     disabled_count += 1
-                # If bill doesn't exist, that's also a problem - create and disable
+                # If bill doesn't exist, that's also a problem
                 elif not current_bill:
                     logger.warning(
                         f"Subscription {subscription.id} (Customer: {subscription.customer.customer_id}) "
@@ -83,80 +79,27 @@ def check_and_disable_expired_subscriptions():
 
 def disable_subscription(subscription, bill):
     """
-    Disable subscription in MikroTik and update status
+    Disable a subscription and update MikroTik
     """
     try:
-        # Disable in MikroTik
-        service = MikroTikService(subscription.router)
-        success, message = service.disable_pppoe_user(subscription.mikrotik_username)
+        # Update subscription status
+        subscription.status = 'suspended'
+        subscription.save()
         
-        if success:
-            # Update subscription status to suspended
-            subscription.status = 'suspended'
-            subscription.save()
-            
-            # Update bill status to overdue
+        # Update bill status to overdue if it's still pending
+        if bill.status == 'pending':
             bill.status = 'overdue'
             bill.save()
+        
+        # Disable in MikroTik
+        if subscription.router:
+            mikrotik_service = MikroTikService(subscription.router)
+            success = mikrotik_service.disable_customer(subscription.customer.customer_id)
             
-            logger.info(
-                f"Disabled subscription {subscription.id} "
-                f"(Customer: {subscription.customer.customer_id}) due to unpaid bill"
-            )
-        else:
-            logger.error(
-                f"Failed to disable subscription {subscription.id} in MikroTik: {message}"
-            )
-            
+            if success:
+                logger.info(f"Successfully disabled subscription {subscription.id} in MikroTik")
+            else:
+                logger.error(f"Failed to disable subscription {subscription.id} in MikroTik")
+                
     except Exception as e:
         logger.error(f"Error disabling subscription {subscription.id}: {e}")
-
-
-@util.close_old_connections
-def delete_old_job_executions(max_age=604_800):
-    """
-    Delete old job executions (older than 7 days by default)
-    This job deletes APScheduler job execution entries older than `max_age` from the database.
-    """
-    DjangoJobExecution.objects.delete_old_job_executions(max_age)
-
-
-def start_scheduler():
-    """
-    Start the APScheduler background scheduler
-    """
-    scheduler = BackgroundScheduler()
-    scheduler.add_jobstore(DjangoJobStore(), "default")
-    
-    # Add job to check expired subscriptions every minute (for development/testing)
-    scheduler.add_job(
-        check_and_disable_expired_subscriptions,
-        trigger=CronTrigger(second=0),  # Run every minute at second 0
-        id="check_expired_subscriptions",
-        max_instances=1,
-        replace_existing=True,
-        name="Check and disable expired subscriptions"
-    )
-    logger.info("Added job: Check and disable expired subscriptions (runs every minute)")
-    
-    # Add job to delete old job executions every week
-    scheduler.add_job(
-        delete_old_job_executions,
-        trigger=CronTrigger(
-            day_of_week="mon", hour="00", minute="00"
-        ),  # Every Monday at midnight
-        id="delete_old_job_executions",
-        max_instances=1,
-        replace_existing=True,
-        name="Delete old job executions"
-    )
-    logger.info("Added job: Delete old job executions (runs every Monday at midnight)")
-    
-    try:
-        logger.info("Starting scheduler...")
-        scheduler.start()
-        logger.info("Scheduler started successfully!")
-    except KeyboardInterrupt:
-        logger.info("Stopping scheduler...")
-        scheduler.shutdown()
-        logger.info("Scheduler shut down successfully!")

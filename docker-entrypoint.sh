@@ -7,11 +7,7 @@ while ! nc -z db 5432; do
 done
 echo "PostgreSQL is ready!"
 
-echo "Running database migrations..."
-python manage.py migrate --noinput
-
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
-
-echo "Starting Gunicorn..."
+echo "Starting application..."
 exec "$@"
+
+

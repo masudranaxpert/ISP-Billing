@@ -30,7 +30,8 @@ urlpatterns = [
     path('api/', include('subscription.urls')),
     path('api/', include('billing.urls')),
     path('api/', include('analytics.urls')),   
-    path('api/', include('dashboard.urls')),     
+    path('api/', include('dashboard.urls')),
+    path('api/', include('schedule.urls')),  # Schedule management
 ]
 
 # Serve media files in development
