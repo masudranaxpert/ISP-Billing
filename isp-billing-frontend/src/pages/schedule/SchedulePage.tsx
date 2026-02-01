@@ -78,6 +78,7 @@ function SchedulePage() {
         interval_value: 1,
         interval_unit: 'minutes',
         schedule_time: '',
+        day_of_month: 1,
         is_enabled: true
     })
 
@@ -117,12 +118,17 @@ function SchedulePage() {
         }
     }
 
-    const handleEdit = (config: ScheduleConfig) => {
+    const handleEdit = (config: any) => {
         setSelectedConfig(config)
+
+        // Determine initial mode based on API data
+        // If it's MONTHLY (unit='months'), set defaults
+
         setEditForm({
-            interval_value: config.interval_value,
-            interval_unit: config.interval_unit,
+            interval_value: config.interval_value || 1,
+            interval_unit: config.interval_unit || 'minutes',
             schedule_time: config.schedule_time || '',
+            day_of_month: config.day_of_month || 1,
             is_enabled: config.is_enabled
         })
         setEditDialogOpen(true)
@@ -153,22 +159,8 @@ function SchedulePage() {
         }
     }
 
-    const getScheduleDisplay = (config: ScheduleConfig) => {
-        // If cron expression exists, show it
-        if (config.cron_expression) {
-            return config.cron_expression
-        }
-
-        // For daily schedules with specific time
-        if (config.interval_unit === 'days' && config.interval_value === 1 && config.schedule_time) {
-            const time = new Date(`2000-01-01T${config.schedule_time}`)
-            return `Daily at ${time.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
-        }
-
-        // Otherwise show interval
-        const value = config.interval_value
-        const unit = config.interval_unit
-        return `Every ${value} ${unit}`
+    const getScheduleDisplay = (config: any) => {
+        return config.schedule_display || "Not scheduled"
     }
 
     const getNextRunBadge = (nextRunTime: string | null) => {
@@ -321,7 +313,7 @@ function SchedulePage() {
                                                     </TableCell>
                                                 </TableRow>
                                             ) : (
-                                                configs.map((config) => (
+                                                configs.map((config: any) => (
                                                     <TableRow key={config.job_id}>
                                                         <TableCell>
                                                             <div className="font-medium">{config.name}</div>
@@ -366,82 +358,206 @@ function SchedulePage() {
 
             {/* Edit Dialog */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                         <DialogTitle>Configure Schedule</DialogTitle>
                         <DialogDescription>
                             {selectedConfig?.name}
                         </DialogDescription>
                     </DialogHeader>
+
                     <div className="grid gap-6 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="interval_value">Run Every</Label>
-                            <Input
-                                id="interval_value"
-                                type="number"
-                                min="1"
-                                value={editForm.interval_value}
-                                onChange={(e) => setEditForm({ ...editForm, interval_value: parseInt(e.target.value) })}
-                            />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="interval_unit">Time Unit</Label>
-                            <Select
-                                value={editForm.interval_unit}
-                                onValueChange={(value) => setEditForm({ ...editForm, interval_unit: value })}
-                            >
-                                <SelectTrigger id="interval_unit">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="seconds">Seconds</SelectItem>
-                                    <SelectItem value="minutes">Minutes</SelectItem>
-                                    <SelectItem value="hours">Hours</SelectItem>
-                                    <SelectItem value="days">Days</SelectItem>
-                                    <SelectItem value="weeks">Weeks</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        {/* 1. Schedule Mode Selection */}
+                        <div className="grid gap-3">
+                            <Label>Schedule Mode</Label>
+
+                            {/* Special handling for Bill Generation Job - Locked to Monthly */}
+                            {selectedConfig?.job_id === 'generate_monthly_bills' ? (
+                                <div className="border p-3 rounded-md bg-primary/10 ring-1 ring-primary flex items-center">
+                                    <input
+                                        type="radio"
+                                        checked
+                                        readOnly
+                                        className="h-4 w-4 text-primary mr-2"
+                                    />
+                                    <span className="text-sm font-medium">Monthly (Required for Billing Cycle)</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center space-x-3 border p-3 rounded-md bg-muted/20">
+                                    {/* Option 1: Interval */}
+                                    <label className={`flex items-center cursor-pointer p-2 rounded-md transition-colors ${editForm.interval_unit !== 'days' && editForm.interval_unit !== 'months' ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}>
+                                        <input
+                                            type="radio"
+                                            name="schedule_mode"
+                                            className="h-4 w-4 text-primary mr-2"
+                                            checked={editForm.interval_unit !== 'days' && editForm.interval_unit !== 'months'}
+                                            onChange={() => setEditForm(prev => ({
+                                                ...prev,
+                                                interval_unit: 'minutes',
+                                                interval_value: 1,
+                                                schedule_time: ''
+                                            }))}
+                                        />
+                                        <span className="text-sm font-medium">Recurring</span>
+                                    </label>
+
+                                    {/* Option 2: Daily */}
+                                    <label className={`flex items-center cursor-pointer p-2 rounded-md transition-colors ${editForm.interval_unit === 'days' ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}>
+                                        <input
+                                            type="radio"
+                                            name="schedule_mode"
+                                            className="h-4 w-4 text-primary mr-2"
+                                            checked={editForm.interval_unit === 'days'}
+                                            onChange={() => setEditForm(prev => ({
+                                                ...prev,
+                                                interval_unit: 'days',
+                                                interval_value: 1,
+                                                schedule_time: '00:00'
+                                            }))}
+                                        />
+                                        <span className="text-sm font-medium">Daily</span>
+                                    </label>
+
+                                    {/* Option 3: Monthly */}
+                                    <label className={`flex items-center cursor-pointer p-2 rounded-md transition-colors ${editForm.interval_unit === 'months' ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-muted'}`}>
+                                        <input
+                                            type="radio"
+                                            name="schedule_mode"
+                                            className="h-4 w-4 text-primary mr-2"
+                                            checked={editForm.interval_unit === 'months'}
+                                            onChange={() => setEditForm(prev => ({
+                                                ...prev,
+                                                interval_unit: 'months',
+                                                interval_value: 1,
+                                                day_of_month: 1,
+                                                schedule_time: '00:00'
+                                            }))}
+                                        />
+                                        <span className="text-sm font-medium">Monthly</span>
+                                    </label>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Show time picker for daily schedules */}
-                        {editForm.interval_unit === 'days' && editForm.interval_value === 1 && (
-                            <div className="grid gap-2">
-                                <Label htmlFor="schedule_time">Time of Day (Optional)</Label>
-                                <Input
-                                    id="schedule_time"
-                                    type="time"
-                                    value={editForm.schedule_time}
-                                    onChange={(e) => setEditForm({ ...editForm, schedule_time: e.target.value })}
-                                    placeholder="HH:MM"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                    Leave empty to run every day without specific time
-                                </p>
-                            </div>
-                        )}
+                        {/* 2. Dynamic Fields based on Mode */}
+                        <div className="min-h-[120px]">
+                            {/* CASE: Monthly Mode */}
+                            {(editForm.interval_unit === 'months' || selectedConfig?.job_id === 'generate_monthly_bills') && (
+                                <div className="grid gap-4 animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="day_of_month">Run on Day of Month</Label>
+                                            <Input
+                                                id="day_of_month"
+                                                type="number"
+                                                min="1"
+                                                max="28" // Safer max for billing
+                                                value={editForm.day_of_month}
+                                                onChange={(e) => setEditForm({ ...editForm, day_of_month: parseInt(e.target.value) || 1 })}
+                                            />
+                                            <p className="text-[10px] text-muted-foreground">Recommend: 1-28</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="schedule_time">At Time</Label>
+                                            <Input
+                                                id="schedule_time"
+                                                type="time"
+                                                value={editForm.schedule_time}
+                                                onChange={(e) => setEditForm({ ...editForm, schedule_time: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                    {selectedConfig?.job_id === 'generate_monthly_bills' && (
+                                        <div className="rounded bg-yellow-50 p-2 border border-yellow-200 text-xs text-yellow-800">
+                                            ⚠️ This job will generate bills for the <strong>current month</strong> when it runs. Ensure the date is appropriate (e.g., 1st of month).
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="is_enabled">Enable Job</Label>
+                            {/* CASE: Daily Mode - Hidden for monthly_bills */}
+                            {editForm.interval_unit === 'days' && selectedConfig?.job_id !== 'generate_monthly_bills' && (
+                                <div className="grid gap-2 animate-in fade-in zoom-in-95 duration-200">
+                                    <Label htmlFor="schedule_time">Run Daily At</Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            id="schedule_time"
+                                            type="time"
+                                            className="text-lg w-full"
+                                            value={editForm.schedule_time}
+                                            onChange={(e) => setEditForm({ ...editForm, schedule_time: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* CASE: Interval Mode */}
+                            {editForm.interval_unit !== 'days' && editForm.interval_unit !== 'months' && (
+                                <div className="grid gap-4 animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="interval_value">Run Every</Label>
+                                            <Input
+                                                id="interval_value"
+                                                type="number"
+                                                min="1"
+                                                value={editForm.interval_value}
+                                                onChange={(e) => setEditForm({ ...editForm, interval_value: parseInt(e.target.value) || 1 })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="interval_unit">Unit</Label>
+                                            <Select
+                                                value={editForm.interval_unit}
+                                                onValueChange={(value) => setEditForm({ ...editForm, interval_unit: value })}
+                                            >
+                                                <SelectTrigger id="interval_unit">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="seconds">Seconds</SelectItem>
+                                                    <SelectItem value="minutes">Minutes</SelectItem>
+                                                    <SelectItem value="hours">Hours</SelectItem>
+                                                    <SelectItem value="weeks">Weeks</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 3. Enable Switch */}
+                        <div className="flex items-center justify-between border-t pt-4">
+                            <Label htmlFor="is_enabled" className="text-base">Enable Job</Label>
                             <Switch
                                 id="is_enabled"
                                 checked={editForm.is_enabled}
                                 onCheckedChange={(checked) => setEditForm({ ...editForm, is_enabled: checked })}
                             />
                         </div>
-                        <div className="rounded-lg bg-muted p-4 text-sm">
-                            <p className="font-medium">Summary:</p>
-                            <p className="text-muted-foreground mt-1">
-                                {editForm.interval_unit === 'days' && editForm.interval_value === 1 && editForm.schedule_time ? (
-                                    <>This job will run <strong>daily at {new Date(`2000-01-01T${editForm.schedule_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></>
-                                ) : (
-                                    <>This job will run <strong>every {editForm.interval_value} {editForm.interval_unit}</strong></>
-                                )}
+
+                        {/* 4. Info Box */}
+                        <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground border">
+                            <p className="font-semibold mb-1 text-primary">
+                                {editForm.interval_unit === 'months' ? "📅 Monthly Schedule (Cron)" :
+                                    editForm.interval_unit === 'days' ? "🌞 Daily Schedule (Cron)" :
+                                        "⏳ Recurring Interval"}
                             </p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Note: Changes will take effect after the scheduler restarts
+                            <p>
+                                {editForm.interval_unit === 'months' && editForm.day_of_month && editForm.schedule_time && (
+                                    <>Will run <strong>on Day {editForm.day_of_month} of every month at {new Date(`2000-01-01T${editForm.schedule_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></>
+                                )}
+                                {editForm.interval_unit === 'days' && editForm.schedule_time && (
+                                    <>Will run <strong>every day at {new Date(`2000-01-01T${editForm.schedule_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</strong></>
+                                )}
+                                {editForm.interval_unit !== 'days' && editForm.interval_unit !== 'months' && (
+                                    <>Will run <strong>every {editForm.interval_value} {editForm.interval_unit}</strong> starting from the last execution time.</>
+                                )}
                             </p>
                         </div>
                     </div>
+
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
                             Cancel

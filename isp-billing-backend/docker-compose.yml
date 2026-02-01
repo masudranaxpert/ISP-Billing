@@ -46,7 +46,7 @@ services:
     image: isp-billing:latest
     env_file:
       - .env
-    command: python run_scheduler.py
+    command: python manage.py run_zenpulse_scheduler --lock --sync-every 30
     depends_on:
       migrate:
         condition: service_completed_successfully
