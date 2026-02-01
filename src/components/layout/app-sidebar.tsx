@@ -138,6 +138,11 @@ const data = {
       ],
     },
     {
+      title: "Schedule",
+      url: "/schedule",
+      icon: IconReport,
+    },
+    {
       title: "Analytics",
       url: "/analytics",
       icon: IconChartBar,

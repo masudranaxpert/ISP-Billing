@@ -35,6 +35,7 @@ import UsersPage from "@/pages/UsersPage"
 import UserDetailPage from "@/pages/UserDetailPage"
 import AddUserPage from "@/pages/AddUserPage"
 import LoginHistoryPage from "@/pages/LoginHistoryPage"
+import SchedulePage from "@/pages/schedule/SchedulePage"
 
 
 
@@ -81,6 +82,7 @@ function App() {
           <Route path="/users/:id" element={<UserDetailPage />} />
           <Route path="/users/:id/edit" element={<AddUserPage />} />
           <Route path="/users/login-history" element={<LoginHistoryPage />} />
+          <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </Router>
