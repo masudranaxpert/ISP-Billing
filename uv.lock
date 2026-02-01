@@ -80,19 +80,6 @@ wheels = [
 ]
 
 [[package]]
-name = "django-apscheduler"
-version = "0.7.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "apscheduler" },
-    { name = "django" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/64/6b/873899c2da113187b74f0cccdf4c16660e07bfbbcae72621c4758e0958bf/django_apscheduler-0.7.0.tar.gz", hash = "sha256:30d61a2ba98615922fc2c9782f84bba342ec0c5ed63384d686d71ea90a1a4318", size = 473051, upload-time = "2024-09-28T04:54:09.98Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/19/c3d2dea21a6afdc93689b9f769ff3694cac810e4a09c24ab423dd1613e6c/django_apscheduler-0.7.0-py3-none-any.whl", hash = "sha256:869d489775420245c9455d55e35f663c856a33ebfc996d92938f786ffb8730ce", size = 24690, upload-time = "2024-09-28T04:54:06.884Z" },
-]
-
-[[package]]
 name = "django-cors-headers"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -209,7 +196,6 @@ source = { virtual = "." }
 dependencies = [
     { name = "dj-database-url" },
     { name = "django" },
-    { name = "django-apscheduler" },
     { name = "django-cors-headers" },
     { name = "django-filter" },
     { name = "django-phonenumber-field" },
@@ -225,13 +211,13 @@ dependencies = [
     { name = "routeros-api" },
     { name = "uvicorn" },
     { name = "whitenoise" },
+    { name = "zenpulse-scheduler" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "dj-database-url", specifier = ">=3.1.0" },
     { name = "django", specifier = ">=6.0.1" },
-    { name = "django-apscheduler", specifier = ">=0.7.0" },
     { name = "django-cors-headers", specifier = ">=4.9.0" },
     { name = "django-filter", specifier = ">=25.2" },
     { name = "django-phonenumber-field", specifier = ">=8.4.0" },
@@ -247,6 +233,7 @@ requires-dist = [
     { name = "routeros-api", specifier = ">=0.21.0" },
     { name = "uvicorn", specifier = ">=0.40.0" },
     { name = "whitenoise", specifier = ">=6.9.0" },
+    { name = "zenpulse-scheduler", specifier = ">=0.1.0" },
 ]
 
 [[package]]
@@ -620,4 +607,17 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/15/95/8c81ec6b6ebcbf8aca2de7603070ccf37dbb873b03f20708e0f7c1664bc6/whitenoise-6.11.0.tar.gz", hash = "sha256:0f5bfce6061ae6611cd9396a8231e088722e4fc67bc13a111be74c738d99375f", size = 26432, upload-time = "2025-09-18T09:16:10.995Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6c/e9/4366332f9295fe0647d7d3251ce18f5615fbcb12d02c79a26f8dba9221b3/whitenoise-6.11.0-py3-none-any.whl", hash = "sha256:b2aeb45950597236f53b5342b3121c5de69c8da0109362aee506ce88e022d258", size = 20197, upload-time = "2025-09-18T09:16:09.754Z" },
+]
+
+[[package]]
+name = "zenpulse-scheduler"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "apscheduler" },
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cd/67/555c74fef7c1c197f91cf57bcdd6366072649170283fffa50906c03f0fc8/zenpulse_scheduler-0.1.0.tar.gz", hash = "sha256:f547ecddb7e3c7e06039561c61ffc1a2d569e2a3aaca49c4d477f91ab0a1ac2d", size = 13215, upload-time = "2026-02-01T12:51:35.487Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/86/8f43d0beae0adcd4344503d508666d10d62348c9fa2f32d9f2cdb90c3459/zenpulse_scheduler-0.1.0-py3-none-any.whl", hash = "sha256:3f0be2eb498d44956499780c254f113caa8cbb844de73df9b6f8b402952a537e", size = 10945, upload-time = "2026-02-01T12:51:34.18Z" },
 ]

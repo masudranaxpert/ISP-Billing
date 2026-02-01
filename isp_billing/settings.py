@@ -57,7 +57,6 @@ INSTALLED_APPS = [
     'django_filters',
     'phonenumber_field',
     'corsheaders',
-    'django_apscheduler',
     
     # Local apps
     'accounts',
@@ -69,7 +68,7 @@ INSTALLED_APPS = [
     'dashboard',
     'utils',
     'schedule',
-    'zenpulse_scheduler',   
+    'zenpulse_scheduler',  
 ]
 
 MIDDLEWARE = [

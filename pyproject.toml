@@ -7,7 +7,6 @@ requires-python = ">=3.13"
 dependencies = [
     "dj-database-url>=3.1.0",
     "django>=6.0.1",
-    "django-apscheduler>=0.7.0",
     "django-cors-headers>=4.9.0",
     "django-filter>=25.2",
     "django-phonenumber-field>=8.4.0",
@@ -23,4 +22,5 @@ dependencies = [
     "routeros-api>=0.21.0",
     "uvicorn>=0.40.0",
     "whitenoise>=6.9.0",
+    "zenpulse-scheduler>=0.1.0",
 ]
