@@ -38,10 +38,11 @@ class BillCreateSerializer(serializers.ModelSerializer):
         model = Bill
         fields = [
             'subscription', 'billing_month', 'billing_year',
-            'billing_date', 'package_price', 'total_amount',
+            'package_price', 'total_amount',
             'paid_amount', 'due_amount', 'status',
             'discount', 'other_charges', 'notes'
         ]
+        read_only_fields = ['total_amount', 'due_amount']
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -52,11 +53,12 @@ class PaymentSerializer(serializers.ModelSerializer):
     payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     received_by_name = serializers.CharField(source='received_by.username', read_only=True)
+    advance_number = serializers.CharField(source='advance_payment.advance_number', read_only=True)
     
     class Meta:
         model = Payment
         fields = [
-            'id', 'payment_number', 'bill', 'bill_number',
+            'id', 'payment_number', 'bill', 'bill_number', 'advance_payment', 'advance_number',
             'amount', 'payment_method', 'payment_method_display',
             'payment_date', 'transaction_id', 'reference_number',
             'status', 'status_display', 'notes',
@@ -74,7 +76,7 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         model = Payment
         fields = [
             'bill', 'amount', 'payment_method', 'payment_date',
-            'transaction_id', 'reference_number', 'notes'
+            'transaction_id', 'reference_number', 'notes', 'advance_payment'
         ]
 
 
@@ -98,16 +100,16 @@ class AdvancePaymentSerializer(serializers.ModelSerializer):
     """
     Serializer for Advance Payment model
     """
-    subscription_customer = serializers.CharField(source='subscription.customer.name', read_only=True)
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    customer_phone = serializers.CharField(source='customer.phone', read_only=True)
     payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
     received_by_name = serializers.CharField(source='received_by.username', read_only=True)
     
     class Meta:
         model = AdvancePayment
         fields = [
-            'id', 'advance_number', 'subscription', 'subscription_customer',
+            'id', 'advance_number', 'customer', 'customer_name', 'customer_phone',
             'amount', 'payment_method', 'payment_method_display', 'payment_date',
-            'months_covered', 'discount_percentage', 'discount_amount',
             'used_amount', 'remaining_balance', 'transaction_id', 'notes',
             'received_by', 'received_by_name', 'created_at', 'updated_at'
         ]
@@ -124,8 +126,7 @@ class AdvancePaymentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = AdvancePayment
         fields = [
-            'subscription', 'amount', 'payment_method', 'payment_date',
-            'months_covered', 'discount_percentage', 'discount_amount',
+            'customer', 'amount', 'payment_method', 'payment_date',
             'transaction_id', 'notes'
         ]
 

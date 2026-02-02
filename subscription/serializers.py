@@ -138,6 +138,15 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
     router_name = serializers.CharField(source='router.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     next_billing_date = serializers.DateField(read_only=True)
+    customer_advance_balance = serializers.SerializerMethodField()
+
+    def get_customer_advance_balance(self, obj):
+        from billing.models import AdvancePayment
+        from django.db.models import Sum
+        total = AdvancePayment.objects.filter(
+            customer=obj.customer
+        ).aggregate(balance=Sum('remaining_balance'))['balance']
+        return total or 0.00
     
     class Meta:
         model = Subscription
@@ -146,7 +155,8 @@ class SubscriptionListSerializer(serializers.ModelSerializer):
             'start_date', 'billing_day', 'next_billing_date', 'status', 'status_display',
             'router_name', 'protocol', 'mikrotik_profile_name',
             'mikrotik_username', 'framed_ip_address', 'mac_address',
-            'is_synced_to_mikrotik', 'sync_error', 'created_at'
+            'is_synced_to_mikrotik', 'sync_error', 'created_at',
+            'customer_advance_balance'
         ]
 
 

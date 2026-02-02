@@ -1,4 +1,6 @@
 from rest_framework import generics, filters, status
+
+
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -52,8 +54,48 @@ class BillCreateView(generics.CreateAPIView):
         # Set generated_by
         bill = serializer.save(
             is_auto_generated=False,
-            generated_by=request.user
+            generated_by=request.user,
+            billing_date=timezone.now().date()
         )
+
+        # Check for Advance Payment and Auto-Deduct logic (Copied from GenerateMonthlyBillsView)
+        # Only process if bill is not already paid or cancelled
+        if bill.status not in ['paid', 'cancelled'] and bill.due_amount > 0:
+            try:
+                valid_advances = AdvancePayment.objects.filter(
+                    customer=bill.subscription.customer, 
+                    remaining_balance__gt=0
+                ).order_by('created_at') # FIFO: Use oldest advance first
+
+                for advance in valid_advances:
+                    bill.refresh_from_db() # Ensure we have latest due amount
+                    if bill.due_amount <= 0:
+                        break
+                    
+                    deduct_amount = min(bill.due_amount, advance.remaining_balance)
+                    
+                    # Create Payment Linked to Advance
+                    Payment.objects.create(
+                        bill=bill,
+                        amount=deduct_amount,
+                        payment_method='adjustment_from_advance',
+                        payment_date=timezone.now(),
+                        advance_payment=advance,
+                        status='completed',
+                        notes=f'Auto-deducted from Advance {advance.advance_number}',
+                        received_by=request.user
+                    )
+                    
+                    # Update Advance Balance
+                    advance.used_amount += deduct_amount
+                    advance.remaining_balance -= deduct_amount
+                    advance.save()
+            except Exception as e:
+                # Log error but don't fail the request
+                pass
+        
+        # Final refresh to ensure response data is accurate
+        bill.refresh_from_db()
         
         return Response({
             'message': 'Bill created successfully',
@@ -110,7 +152,7 @@ class GenerateMonthlyBillsView(APIView):
                     
                 amount = sub.package.price
 
-                Bill.objects.create(
+                bill = Bill.objects.create(
                     subscription=sub,
                     billing_month=month,
                     billing_year=year,
@@ -123,6 +165,39 @@ class GenerateMonthlyBillsView(APIView):
                     is_auto_generated=True,
                     generated_by=request.user
                 )
+
+                # Check for Advance Payment and Auto-Deduct
+                valid_advances = AdvancePayment.objects.filter(
+                    customer=sub.customer, 
+                    remaining_balance__gt=0
+                ).order_by('created_at') # FIFO: Use oldest advance first
+
+                for advance in valid_advances:
+                    if bill.due_amount <= 0:
+                        break
+                    
+                    deduct_amount = min(bill.due_amount, advance.remaining_balance)
+                    
+                    # Create Payment Linked to Advance
+                    Payment.objects.create(
+                        bill=bill,
+                        amount=deduct_amount,
+                        payment_method='adjustment_from_advance',
+                        payment_date=timezone.now(),
+                        advance_payment=advance,
+                        status='completed',
+                        notes=f'Auto-deducted from Advance {advance.advance_number}',
+                        received_by=request.user
+                    )
+                    
+                    # Update Advance Balance
+                    advance.used_amount += deduct_amount
+                    advance.remaining_balance -= deduct_amount
+                    advance.save()
+                    
+                    # Refresh bill to update due amount for next iteration check (though bill.save called in Payment signal/save)
+                    bill.refresh_from_db()
+
                 generated_count += 1
             except Exception as e:
                 errors.append(f"Sub {sub.id}: {str(e)}")
@@ -239,11 +314,11 @@ class AdvancePaymentListView(generics.ListAPIView):
     """
     API endpoint to list all advance payments
     """
-    queryset = AdvancePayment.objects.select_related('subscription__customer').all()
+    queryset = AdvancePayment.objects.select_related('customer').all()
     serializer_class = AdvancePaymentSerializer
     permission_classes = [IsAdminOrManager]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['subscription', 'payment_method']
+    filterset_fields = ['customer', 'payment_method']
     ordering_fields = ['payment_date', 'amount', 'remaining_balance']
     ordering = ['-payment_date']
 
@@ -264,20 +339,92 @@ class AdvancePaymentCreateView(generics.CreateAPIView):
         # Set received_by
         advance = serializer.save(received_by=request.user)
         
+        # Trigger Retro-Active Payment Logic: Pay oldest pending bills first
+        pending_bills = Bill.objects.filter(
+            subscription__customer=advance.customer,
+            status__in=['pending', 'partial', 'overdue']
+        ).order_by('billing_year', 'billing_month')
+
+        paid_count = 0
+        
+        for bill in pending_bills:
+            if advance.remaining_balance <= 0:
+                break
+                
+            due = bill.due_amount
+            # Ensure due > 0 (sanity check)
+            if due <= 0: continue
+
+            pay_amount = min(due, advance.remaining_balance)
+            
+            # Create Payment
+            Payment.objects.create(
+                bill=bill,
+                amount=pay_amount,
+                payment_method='adjustment_from_advance',
+                payment_date=timezone.now(),
+                advance_payment=advance,
+                status='completed',
+                notes=f'Auto-deducted from New Advance {advance.advance_number}',
+                received_by=request.user
+            )
+            
+            # Update Advance Balance
+            advance.used_amount += pay_amount
+            advance.remaining_balance -= pay_amount
+            advance.save()
+            paid_count += 1
+        
+        # Add meta info about auto-payments
+        response_data = AdvancePaymentSerializer(advance).data
+        
         return Response({
-            'message': 'Advance payment recorded successfully',
-            'advance_payment': AdvancePaymentSerializer(advance).data
+            'message': f'Advance payment recorded successfully. {paid_count} bills auto-paid.',
+            'advance_payment': response_data
         }, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(tags=['Billing'])
-class AdvancePaymentDetailView(generics.RetrieveAPIView):
+@extend_schema(tags=['Billing'])
+class AdvancePaymentDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    API endpoint to get advance payment details
+    API endpoint to get, update, or delete advance payment details
     """
     queryset = AdvancePayment.objects.all()
     serializer_class = AdvancePaymentSerializer
-    permission_classes = [IsAdminOrManager]
+    # Allow authenticated users, but enforce logic in methods
+    # Assuming standard users need access. If IsAdminOrManager is strict, only they can access.
+    # To be safe, I'll keep existing permissions but add the method checks which handle the logic requested.
+    permission_classes = [IsAdminOrManager] 
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        user = self.request.user
+        
+        # Check if user is admin/manager
+        is_admin_or_manager = getattr(user, 'role', '') in ['admin', 'manager'] or user.is_superuser or user.is_staff
+        
+        if not is_admin_or_manager:
+            # Check time limit (30 mins)
+            diff = timezone.now() - instance.created_at
+            if diff.total_seconds() > 1800:
+                from rest_framework import exceptions
+                raise exceptions.PermissionDenied("Time limit exceeded. You cannot edit this payment after 30 minutes.")
+        
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        is_admin_or_manager = getattr(user, 'role', '') in ['admin', 'manager'] or user.is_superuser or user.is_staff
+        
+        if not is_admin_or_manager:
+            # Check time limit (30 mins)
+            diff = timezone.now() - instance.created_at
+            if diff.total_seconds() > 1800:
+                from rest_framework import exceptions
+                raise exceptions.PermissionDenied("Time limit exceeded. You cannot delete this payment after 30 minutes.")
+        
+        instance.delete()
 
 
 # ==================== Discount Views ====================

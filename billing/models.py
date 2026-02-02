@@ -41,13 +41,13 @@ class Bill(models.Model):
     discount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=0.00,
+        default=Decimal('0.00'),
         help_text='Discount amount'
     )
     other_charges = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=0.00,
+        default=Decimal('0.00'),
         help_text='Other charges (e.g., router rent)'
     )
     total_amount = models.DecimalField(
@@ -58,7 +58,7 @@ class Bill(models.Model):
     paid_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=0.00,
+        default=Decimal('0.00'),
         help_text='Amount paid'
     )
     due_amount = models.DecimalField(
@@ -170,6 +170,7 @@ class Payment(models.Model):
         ('rocket', 'Rocket'),
         ('bank', 'Bank Transfer'),
         ('card', 'Card'),
+        ('adjustment_from_advance', 'Adjustment from Advance'),
         ('other', 'Other'),
     )
     
@@ -190,13 +191,23 @@ class Payment(models.Model):
         related_name='payments'
     )
     
+    # Advance Payment Link
+    advance_payment = models.ForeignKey(
+        'AdvancePayment',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='payments_made',
+        help_text='Linked advance payment if paid from advance'
+    )
+    
     # Payment Details
     amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
     )
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICES)
     payment_date = models.DateTimeField()
     
     # Transaction Details
@@ -338,6 +349,8 @@ class Invoice(models.Model):
         super().save(*args, **kwargs)
 
 
+from customers.models import Customer
+
 class AdvancePayment(models.Model):
     """
     Advance payment model for customer wallet/balance
@@ -355,9 +368,9 @@ class AdvancePayment(models.Model):
     # Advance Payment ID
     advance_number = models.CharField(max_length=50, unique=True, editable=False)
     
-    # Subscription
-    subscription = models.ForeignKey(
-        Subscription,
+    # Customer (Changed from Subscription to Customer)
+    customer = models.ForeignKey(
+        Customer,
         on_delete=models.CASCADE,
         related_name='advance_payments'
     )
@@ -371,29 +384,11 @@ class AdvancePayment(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
     payment_date = models.DateTimeField()
     
-    # Advance Details
-    months_covered = models.IntegerField(
-        default=1,
-        help_text='Number of months paid in advance'
-    )
-    discount_percentage = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=0.00,
-        help_text='Discount percentage for advance payment'
-    )
-    discount_amount = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        help_text='Discount amount applied'
-    )
-    
     # Balance Tracking
     used_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=0.00,
+        default=Decimal('0.00'),
         help_text='Amount already used from advance'
     )
     remaining_balance = models.DecimalField(
@@ -423,7 +418,7 @@ class AdvancePayment(models.Model):
         ordering = ['-payment_date']
     
     def __str__(self):
-        return f"{self.advance_number} - {self.amount} BDT ({self.months_covered} months)"
+        return f"{self.advance_number} - {self.amount} BDT"
     
     def save(self, *args, **kwargs):
         """
@@ -445,9 +440,13 @@ class AdvancePayment(models.Model):
             
             self.advance_number = f'ADV-{year}-{new_number:04d}'
         
-        # Calculate remaining balance
-        self.remaining_balance = self.amount - self.used_amount
-        
+        # Calculate remaining balance (if not manually set)
+        if self.remaining_balance is None:
+             self.remaining_balance = self.amount - self.used_amount
+        else:
+             # Basic sanity check
+             self.remaining_balance = self.amount - self.used_amount
+
         super().save(*args, **kwargs)
 
 
