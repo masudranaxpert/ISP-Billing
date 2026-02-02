@@ -173,18 +173,4 @@ class ScheduleConfigSerializer(serializers.ModelSerializer):
         last = JobExecutionLog.objects.filter(job_key=obj.job_key).first()
         return 'Success' if last and last.status == 'success' else 'Failed' if last else None
 
-    def update(self, instance, validated_data):
-        # Handle simple enable/disable and interval updates
-        if 'enabled' in validated_data:
-            instance.enabled = validated_data['enabled']
-        
-        if 'interval_value' in validated_data:
-            instance.interval_value = validated_data['interval_value']
-            instance.trigger_type = 'interval' # Force interval if updating values
-        
-        if 'interval_unit' in validated_data:
-            instance.interval_unit = validated_data['interval_unit']
-            instance.trigger_type = 'interval'
 
-        instance.save()
-        return instance

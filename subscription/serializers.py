@@ -1,7 +1,24 @@
 from rest_framework import serializers
-from .models import Subscription, SubscriptionHistory
+from .models import Subscription, SubscriptionHistory, ConnectionFee
 from customers.serializers import CustomerSerializer
 from mikrotik.serializers import PackageSerializer
+
+
+class ConnectionFeeSerializer(serializers.ModelSerializer):
+    """
+    Serializer for connection fees
+    """
+    received_by_name = serializers.CharField(source='received_by.username', read_only=True)
+    fee_type_display = serializers.CharField(source='get_fee_type_display', read_only=True)
+
+    class Meta:
+        model = ConnectionFee
+        fields = [
+            'id', 'subscription', 'amount', 'fee_type', 'fee_type_display',
+            'date', 'is_paid', 'notes',
+            'received_by', 'received_by_name', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'received_by']
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -17,6 +34,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     next_billing_date = serializers.DateField(read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     
+    # Nested Connection Fees
+    connection_fees = ConnectionFeeSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Subscription
         fields = [
@@ -26,8 +46,9 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'router', 'router_name', 'protocol', 'mikrotik_profile_name',
             'mikrotik_username', 'mikrotik_password',
             'mikrotik_user_id', 'is_synced_to_mikrotik', 'last_synced_at',
-            'sync_error', 'connection_fee', 'reconnection_fee',
+            'sync_error', 
             'framed_ip_address', 'mac_address',
+            'connection_fees',
             'cancelled_at', 'cancellation_reason',
             'created_by', 'created_by_name', 'created_at', 'updated_at'
         ]
@@ -51,7 +72,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
             'customer', 'package', 'start_date', 'billing_day', 'billing_start_month',
             'router', 'protocol', 'mikrotik_profile_name',
             'mikrotik_username', 'mikrotik_password',
-            'connection_fee', 'reconnection_fee', 'status'
+            'status'
         ]
     
     def validate(self, attrs):
@@ -99,7 +120,6 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
             'customer', 'package', 'billing_day', 'billing_start_month',
             'router', 'protocol', 'mikrotik_profile_name', 'status',
             'mikrotik_username', 'mikrotik_password', 'start_date',
-            'connection_fee', 'reconnection_fee'
         ]
 
 
