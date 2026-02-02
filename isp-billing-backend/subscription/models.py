@@ -112,20 +112,7 @@ class Subscription(models.Model):
     last_synced_at = models.DateTimeField(null=True, blank=True)
     sync_error = models.TextField(blank=True, null=True)
     
-    # Fees
-    connection_fee = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        help_text='One-time connection fee'
-    )
-    reconnection_fee = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        default=0.00,
-        help_text='Reconnection fee after suspension'
-    )
-    
+
     # Cancellation
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancellation_reason = models.TextField(blank=True, null=True)
@@ -227,6 +214,50 @@ class Subscription(models.Model):
         except ValueError:
             return next_month + relativedelta(day=31)
 
+
+class ConnectionFee(models.Model):
+    """
+    Track connection and reconnection fees separately
+    """
+    FEE_TYPE_CHOICES = (
+        ('connection', 'New Connection Fee'),
+        ('reconnection', 'Reconnection Fee'),
+        ('other', 'Other Fee'),
+    )
+    
+    subscription = models.ForeignKey(
+        Subscription,
+        on_delete=models.CASCADE,
+        related_name='connection_fees'
+    )
+    amount = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
+    fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, default='connection')
+    date = models.DateField(null=True, blank=True)
+    is_paid = models.BooleanField(default=False)
+    notes = models.TextField(blank=True, null=True)
+    
+    # Metadata
+    received_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='received_connection_fees'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'connection_fees'
+        verbose_name = 'Connection Fee'
+        verbose_name_plural = 'Connection Fees'
+        ordering = ['-date', '-created_at']
+        
+    def __str__(self):
+        return f"{self.subscription.customer.name} - {self.get_fee_type_display()} ({self.amount})"
 
 
 class SubscriptionHistory(models.Model):

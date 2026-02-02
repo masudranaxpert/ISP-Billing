@@ -7,11 +7,11 @@ from drf_spectacular.utils import extend_schema
 from django.utils import timezone
 from django.db import transaction
 
-from .models import Subscription, SubscriptionHistory
+from .models import Subscription, SubscriptionHistory, ConnectionFee
 from .serializers import (
     SubscriptionSerializer, SubscriptionCreateSerializer,
     SubscriptionUpdateSerializer, SubscriptionListSerializer,
-    SubscriptionHistorySerializer
+    SubscriptionHistorySerializer, ConnectionFeeSerializer
 )
 from mikrotik.services import MikroTikService
 from mikrotik.models import MikroTikSyncLog, MikroTikQueueProfile
@@ -90,17 +90,30 @@ class SubscriptionCreateView(generics.CreateAPIView):
     
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        # Handle fees if empty/null
-        data = request.data.copy()
-        if not data.get('connection_fee'):
-            data['connection_fee'] = 0.00
-        if not data.get('reconnection_fee'):
-            data['reconnection_fee'] = 0.00
-            
-        serializer = self.get_serializer(data=data, context={'request': request})
+        # Extract fees data if present
+        fees_data = request.data.get('fees', [])
+        
+        serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         subscription = serializer.save()
         
+        # Create connection fees
+        if fees_data and isinstance(fees_data, list):
+            for fee in fees_data:
+                try:
+                    ConnectionFee.objects.create(
+                        subscription=subscription,
+                        amount=fee.get('amount'),
+                        fee_type=fee.get('fee_type', 'connection'),
+                        date=fee.get('date') or timezone.now().date(),
+                        is_paid=fee.get('is_paid', False),
+                        notes=fee.get('notes', ''),
+                        received_by=request.user
+                    )
+                except Exception as e:
+                    # Log error but don't fail the subscription creation
+                    print(f"Error creating fee for subscription {subscription.id}: {e}")
+
         # Auto-sync to MikroTik if router and profile are selected
         if subscription.router and subscription.mikrotik_profile_name:
             service = MikroTikService(subscription.router)
@@ -130,6 +143,7 @@ class SubscriptionCreateView(generics.CreateAPIView):
                 subscription.save()
             else:
                 # CRITICAL: If MikroTik sync fails, rollback the subscription creation
+                # This will rollback the transaction including fees
                 raise serializers.ValidationError({
                     'mikrotik_error': f"Failed to create user in MikroTik: {result}. Subscription creation rolled back."
                 })
@@ -156,7 +170,7 @@ class SubscriptionDetailView(generics.RetrieveAPIView):
     """
     queryset = Subscription.objects.select_related(
         'customer', 'package', 'router', 'created_by'
-    ).all()
+    ).prefetch_related('connection_fees').all()
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAdminOrManager]
 
@@ -204,6 +218,35 @@ class SubscriptionDeleteView(generics.DestroyAPIView):
     queryset = Subscription.objects.all()
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAdmin]
+
+
+# ==================== Connection Fee Views ====================
+
+@extend_schema(tags=['Subscriptions'])
+class ConnectionFeeListCreateView(generics.ListCreateAPIView):
+    """
+    API endpoint to list or add connection fees
+    """
+    queryset = ConnectionFee.objects.all()
+    serializer_class = ConnectionFeeSerializer
+    permission_classes = [IsAdminOrManager]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['subscription', 'fee_type', 'is_paid']
+    ordering_fields = ['date', 'amount']
+    ordering = ['-date']
+
+    def perform_create(self, serializer):
+        serializer.save(received_by=self.request.user)
+
+
+@extend_schema(tags=['Subscriptions'])
+class ConnectionFeeDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API endpoint to manage individual connection fee
+    """
+    queryset = ConnectionFee.objects.all()
+    serializer_class = ConnectionFeeSerializer
+    permission_classes = [IsAdminOrManager]
 
 
 # ==================== Subscription Actions ====================

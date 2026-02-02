@@ -3,7 +3,8 @@ from .views import (
     SubscriptionListView, SubscriptionCreateView, SubscriptionDetailView,
     SubscriptionUpdateView, SubscriptionDeleteView,
     SubscriptionSyncToMikroTikView, SubscriptionSuspendView,
-    SubscriptionActivateView, SubscriptionHistoryView
+    SubscriptionActivateView, SubscriptionHistoryView,
+    ConnectionFeeListCreateView, ConnectionFeeDetailView
 )
 
 app_name = 'subscription'
@@ -23,4 +24,8 @@ urlpatterns = [
     
     # Subscription History
     path('subscriptions/<int:pk>/history/', SubscriptionHistoryView.as_view(), name='subscription_history'),
+
+    # Connection Fees
+    path('connection-fees/', ConnectionFeeListCreateView.as_view(), name='connection_fee_list_create'),
+    path('connection-fees/<int:pk>/', ConnectionFeeDetailView.as_view(), name='connection_fee_detail'),
 ]

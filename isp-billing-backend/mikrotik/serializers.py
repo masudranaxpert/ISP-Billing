@@ -67,7 +67,7 @@ class MikroTikRouterListSerializer(serializers.ModelSerializer):
     class Meta:
         model = MikroTikRouter
         fields = [
-            'id', 'name', 'ip_address', 'zone_name',
+            'id', 'name', 'ip_address', 'api_port', 'zone_name',
             'status', 'is_online', 'last_connected_at'
         ]
 

@@ -1,5 +1,17 @@
 from django.contrib import admin
-from .models import Subscription, SubscriptionHistory
+from .models import Subscription, SubscriptionHistory, ConnectionFee
+
+
+class ConnectionFeeInline(admin.TabularInline):
+    model = ConnectionFee
+    extra = 0
+    readonly_fields = ['received_by', 'created_at']
+    fields = ['fee_type', 'amount', 'date', 'is_paid', 'notes', 'received_by', 'created_at']
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.received_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Subscription)
@@ -20,6 +32,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
         'next_billing_date'
     ]
     
+    inlines = [ConnectionFeeInline]
+    
     fieldsets = (
         ('Customer & Package', {
             'fields': ('customer', 'package')
@@ -34,10 +48,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
                 'last_synced_at', 'sync_error'
             )
         }),
-        ('Fees', {
-            'fields': ('connection_fee', 'reconnection_fee'),
-            'classes': ('collapse',)
-        }),
+        # Fees section removed
         ('Cancellation', {
             'fields': ('cancelled_at', 'cancellation_reason'),
             'classes': ('collapse',)
@@ -55,6 +66,14 @@ class SubscriptionAdmin(admin.ModelAdmin):
         if not change:  # Only when creating new
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+
+@admin.register(ConnectionFee)
+class ConnectionFeeAdmin(admin.ModelAdmin):
+    list_display = ['subscription', 'fee_type', 'amount', 'date', 'is_paid', 'received_by']
+    list_filter = ['fee_type', 'is_paid', 'date']
+    search_fields = ['subscription__customer__customer_id', 'notes']
+    date_hierarchy = 'date'
 
 
 @admin.register(SubscriptionHistory)
