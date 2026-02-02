@@ -75,6 +75,15 @@ class User(AbstractUser):
     def is_accountant(self):
         return self.role == 'accountant'
 
+    def save(self, *args, **kwargs):
+        """
+        Override save to automatically set role to admin for superusers
+        """
+        if self.is_superuser and self.role != 'admin':
+            self.role = 'admin'
+        
+        super().save(*args, **kwargs)
+
 
 class LoginHistory(models.Model):
     """
