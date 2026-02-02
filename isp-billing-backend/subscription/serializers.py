@@ -10,15 +10,19 @@ class ConnectionFeeSerializer(serializers.ModelSerializer):
     """
     received_by_name = serializers.CharField(source='received_by.username', read_only=True)
     fee_type_display = serializers.CharField(source='get_fee_type_display', read_only=True)
-
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    customer_name = serializers.CharField(source='subscription.customer.name', read_only=True)
+    customer_id_display = serializers.CharField(source='subscription.customer.customer_id', read_only=True)
+    
     class Meta:
         model = ConnectionFee
         fields = [
             'id', 'subscription', 'amount', 'fee_type', 'fee_type_display',
-            'date', 'is_paid', 'notes',
-            'received_by', 'received_by_name', 'created_at'
+            'date', 'is_paid', 'payment_method', 'payment_method_display', 'transaction_id', 'notes',
+            'received_by', 'received_by_name', 'created_at',
+            'customer_name', 'customer_id_display'
         ]
-        read_only_fields = ['id', 'created_at', 'received_by']
+        read_only_fields = ['id', 'created_at', 'received_by', 'payment_method_display']
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):

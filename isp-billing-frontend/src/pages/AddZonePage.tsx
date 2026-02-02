@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Loader2, ArrowLeft } from "lucide-react"
+import { toast } from "sonner"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import {
     SidebarInset,
@@ -56,7 +57,8 @@ function AddZonePage() {
 
         try {
             await zoneService.createZone(formData)
-            alert("Zone created successfully!")
+            // alert("Zone created successfully!") - Removed as per user request
+            toast.success("Zone created successfully!")
             navigate("/zones")
         } catch (error: any) {
             console.error("Failed to create zone", error)

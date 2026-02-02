@@ -225,6 +225,16 @@ class ConnectionFee(models.Model):
         ('other', 'Other Fee'),
     )
     
+    PAYMENT_METHOD_CHOICES = (
+        ('cash', 'Cash'),
+        ('bkash', 'bKash'),
+        ('nagad', 'Nagad'),
+        ('rocket', 'Rocket'),
+        ('bank', 'Bank Transfer'),
+        ('card', 'Card'),
+        ('other', 'Other'),
+    )
+
     subscription = models.ForeignKey(
         Subscription,
         on_delete=models.CASCADE,
@@ -238,6 +248,11 @@ class ConnectionFee(models.Model):
     fee_type = models.CharField(max_length=20, choices=FEE_TYPE_CHOICES, default='connection')
     date = models.DateField(null=True, blank=True)
     is_paid = models.BooleanField(default=False)
+    
+    # Payment Details
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True)
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    
     notes = models.TextField(blank=True, null=True)
     
     # Metadata

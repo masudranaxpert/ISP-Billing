@@ -40,6 +40,38 @@ class Zone(models.Model):
         return self.customers.filter(status='active').count()
 
 
+
+class ConnectionType(models.Model):
+    """
+    Model for Connection Types (e.g., PPPoE, Static IP, Hotspot)
+    """
+    name = models.CharField(max_length=50, unique=True)
+    code = models.CharField(max_length=20, unique=True, null=True, blank=True, help_text='Unique code (e.g., PPPOE, STATIC)')
+    description = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=10, choices=Zone.STATUS_CHOICES, default='active')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'connection_types'
+        verbose_name = 'Connection Type'
+        verbose_name_plural = 'Connection Types'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def customer_count(self):
+        """Get total number of customers with this connection type"""
+        return self.customers.count()
+    
+    @property
+    def active_customer_count(self):
+        """Get number of active customers with this connection type"""
+        return self.customers.filter(status='active').count()
+
+
 class Customer(models.Model):
     """
     Customer model for ISP customers
@@ -48,12 +80,6 @@ class Customer(models.Model):
         ('personal', 'Personal'),
         ('business', 'Business'),
         ('free', 'Free'),
-    )
-    
-    CONNECTION_TYPE_CHOICES = (
-        ('pppoe', 'PPPoE'),
-        ('static_ip', 'Static IP'),
-        ('hotspot', 'Hotspot'),
     )
     
     STATUS_CHOICES = (
@@ -89,10 +115,13 @@ class Customer(models.Model):
         choices=BILLING_TYPE_CHOICES,
         default='residential'
     )
-    connection_type = models.CharField(
-        max_length=20,
-        choices=CONNECTION_TYPE_CHOICES,
-        default='pppoe'
+    connection_type = models.ForeignKey(
+        ConnectionType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='customers',
+        help_text='Type of connection (e.g., PPPoE, Optical Fiber)'
     )
     
     # Network Information

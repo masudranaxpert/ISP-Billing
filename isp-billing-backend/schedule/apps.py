@@ -54,18 +54,28 @@ def seed_schedules(sender, **kwargs):
         }
     }
     
-    created_count = 0
-    # registered_jobs is expected to be a dict {job_key: job_func}
-    for key in registered_jobs:
-        if not ScheduleConfig.objects.filter(job_key=key).exists():
-            defaults = DEFAULTS.get(key, {
-                'trigger_type': 'interval',
-                'interval_value': 1,
-                'interval_unit': 'days',
-                'enabled': True
-            })
-            ScheduleConfig.objects.create(job_key=key, **defaults)
-            created_count += 1
+    try:
+        from django.db.utils import ProgrammingError, OperationalError
+        
+        created_count = 0
+        # registered_jobs is expected to be a dict {job_key: job_func}
+        for key in registered_jobs:
+            try:
+                if not ScheduleConfig.objects.filter(job_key=key).exists():
+                    defaults = DEFAULTS.get(key, {
+                        'trigger_type': 'interval',
+                        'interval_value': 1,
+                        'interval_unit': 'days',
+                        'enabled': True
+                    })
+                    ScheduleConfig.objects.create(job_key=key, **defaults)
+                    created_count += 1
+            except (ProgrammingError, OperationalError):
+                # Table doesn't exist yet, skip
+                return
+                
+        if created_count > 0:
+            print(f"✅ Seeded {created_count} new ScheduleConfigs to DB")
             
-    if created_count > 0:
-        print(f"✅ Seeded {created_count} new ScheduleConfigs to DB")
+    except Exception as e:
+        print(f"Warning: Failed to seed schedules: {e}")

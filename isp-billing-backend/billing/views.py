@@ -102,6 +102,11 @@ class GenerateMonthlyBillsView(APIView):
                 if Bill.objects.filter(subscription=sub, billing_year=year, billing_month=month).exists():
                     skipped_count += 1
                     continue
+                
+                # Skip if customer billing type is free
+                if sub.customer.billing_type == 'free':
+                    skipped_count += 1
+                    continue
                     
                 amount = sub.package.price
 
