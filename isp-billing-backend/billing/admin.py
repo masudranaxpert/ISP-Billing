@@ -83,20 +83,17 @@ class InvoiceAdmin(admin.ModelAdmin):
 @admin.register(AdvancePayment)
 class AdvancePaymentAdmin(admin.ModelAdmin):
     list_display = [
-        'advance_number', 'subscription', 'amount', 'months_covered',
+        'advance_number', 'customer', 'amount',
         'remaining_balance', 'payment_date', 'payment_method'
     ]
     list_filter = ['payment_method', 'payment_date']
-    search_fields = ['advance_number', 'subscription__customer__customer_id', 'transaction_id']
+    search_fields = ['advance_number', 'customer__customer_id', 'transaction_id']
     ordering = ['-payment_date']
     readonly_fields = ['advance_number', 'remaining_balance', 'created_at', 'updated_at']
     
     fieldsets = (
         ('Advance Payment Information', {
-            'fields': ('advance_number', 'subscription', 'amount', 'payment_method', 'payment_date')
-        }),
-        ('Advance Details', {
-            'fields': ('months_covered', 'discount_percentage', 'discount_amount')
+            'fields': ('advance_number', 'customer', 'amount', 'payment_method', 'payment_date')
         }),
         ('Balance Tracking', {
             'fields': ('used_amount', 'remaining_balance')

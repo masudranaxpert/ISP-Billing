@@ -220,6 +220,36 @@ export default function AddBillPage() {
                                     </Select>
                                 </div>
 
+                                {(() => {
+                                    const selectedSub = subscriptions.find(s => s.id.toString() === formData.subscription)
+                                    const balance = selectedSub ? parseFloat(selectedSub.customer_advance_balance || '0') : 0
+
+                                    if (balance > 0) {
+                                        return (
+                                            <div className="rounded-md bg-blue-50 p-4 border border-blue-200">
+                                                <div className="flex">
+                                                    <div className="ml-3">
+                                                        <h3 className="text-sm font-medium text-blue-800">
+                                                            Advance Balance Available
+                                                        </h3>
+                                                        <div className="mt-1 text-sm text-blue-700">
+                                                            <p>
+                                                                This customer has <strong>৳{balance.toFixed(2)}</strong> in advance balance.
+                                                                {formData.status !== 'paid' && formData.status !== 'cancelled' ? (
+                                                                    <span> It will be automatically applied to this bill (if pending/partial).</span>
+                                                                ) : (
+                                                                    <span> <strong>Note:</strong> Auto-deduction is skipped for Paid/Cancelled status.</span>
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+                                    return null
+                                })()}
+
                                 <div className="space-y-2">
                                     <Label htmlFor="billing_period">Billing Period *</Label>
                                     <Select

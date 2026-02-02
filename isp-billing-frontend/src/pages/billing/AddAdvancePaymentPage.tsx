@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { advancePaymentService, customerService } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,19 +15,26 @@ import { Loader2 } from "lucide-react"
 
 export default function AddAdvancePaymentPage() {
     const navigate = useNavigate()
+    const { id } = useParams()
+    const isEditMode = !!id
+
     const [loading, setLoading] = useState(false)
     const [customers, setCustomers] = useState<any[]>([])
 
     const [formData, setFormData] = useState({
         customer: "",
         amount: "",
+        payment_method: "cash",
         payment_date: new Date().toISOString().split('T')[0],
         notes: ""
     })
 
     useEffect(() => {
         fetchCustomers()
-    }, [])
+        if (isEditMode) {
+            fetchPayment()
+        }
+    }, [id])
 
     const fetchCustomers = async () => {
         try {
@@ -38,22 +45,50 @@ export default function AddAdvancePaymentPage() {
         }
     }
 
+    const fetchPayment = async () => {
+        if (!id) return
+        try {
+            setLoading(true)
+            const data = await advancePaymentService.getAdvancePayment(parseInt(id))
+            setFormData({
+                customer: data.customer.toString(),
+                amount: data.amount.toString(),
+                payment_method: data.payment_method,
+                payment_date: data.payment_date.split('T')[0],
+                notes: data.notes || ""
+            })
+        } catch (error) {
+            toast.error("Failed to load advance payment details")
+            navigate("/billing/advance-payments")
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
 
         try {
-            await advancePaymentService.createAdvancePayment({
+            const payload = {
                 customer: parseInt(formData.customer),
                 amount: parseFloat(formData.amount),
+                payment_method: formData.payment_method,
                 payment_date: formData.payment_date,
                 notes: formData.notes
-            })
-            toast.success("Advance Payment recorded successfully")
+            }
+
+            if (isEditMode && id) {
+                await advancePaymentService.updateAdvancePayment(parseInt(id), payload)
+                toast.success("Advance Payment updated successfully")
+            } else {
+                const response = await advancePaymentService.createAdvancePayment(payload)
+                toast.success(response.message || "Advance Payment recorded successfully")
+            }
             navigate("/billing/advance-payments")
-        } catch (error) {
+        } catch (error: any) {
             console.error(error)
-            toast.error("Failed to record advance payment")
+            toast.error(error.response?.data?.detail || "Failed to save advance payment")
         } finally {
             setLoading(false)
         }
@@ -77,7 +112,7 @@ export default function AddAdvancePaymentPage() {
                             </BreadcrumbItem>
                             <BreadcrumbSeparator className="hidden md:block" />
                             <BreadcrumbItem>
-                                <BreadcrumbPage>Record Advance Payment</BreadcrumbPage>
+                                <BreadcrumbPage>{isEditMode ? 'Edit' : 'Record'} Advance Payment</BreadcrumbPage>
                             </BreadcrumbItem>
                         </BreadcrumbList>
                     </Breadcrumb>
@@ -85,8 +120,8 @@ export default function AddAdvancePaymentPage() {
                 <div className="flex flex-1 flex-col gap-4 p-4 max-w-2xl mx-auto w-full">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Record Advance Payment</CardTitle>
-                            <CardDescription>Record an advance payment from a customer</CardDescription>
+                            <CardTitle>{isEditMode ? 'Edit' : 'Record'} Advance Payment</CardTitle>
+                            <CardDescription>{isEditMode ? 'Update existing' : 'Record new'} advance payment from a customer</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,6 +130,7 @@ export default function AddAdvancePaymentPage() {
                                     <Select
                                         value={formData.customer}
                                         onValueChange={(value) => setFormData({ ...formData, customer: value })}
+                                        disabled={isEditMode} // Disable customer change in edit mode for safety
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select customer" />
@@ -121,14 +157,35 @@ export default function AddAdvancePaymentPage() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Date</Label>
-                                        <Input
-                                            type="date"
-                                            required
-                                            value={formData.payment_date}
-                                            onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
-                                        />
+                                        <Label>Payment Method</Label>
+                                        <Select
+                                            value={formData.payment_method}
+                                            onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select method" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="cash">Cash</SelectItem>
+                                                <SelectItem value="bkash">bKash</SelectItem>
+                                                <SelectItem value="nagad">Nagad</SelectItem>
+                                                <SelectItem value="rocket">Rocket</SelectItem>
+                                                <SelectItem value="bank">Bank Transfer</SelectItem>
+                                                <SelectItem value="card">Card</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Date</Label>
+                                    <Input
+                                        type="date"
+                                        required
+                                        value={formData.payment_date}
+                                        onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                                    />
                                 </div>
 
                                 <div className="space-y-2">
@@ -146,7 +203,7 @@ export default function AddAdvancePaymentPage() {
                                     </Button>
                                     <Button type="submit" disabled={loading}>
                                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Record Payment
+                                        {isEditMode ? 'Update' : 'Record'} Payment
                                     </Button>
                                 </div>
                             </form>

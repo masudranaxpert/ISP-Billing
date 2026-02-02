@@ -3,7 +3,7 @@ import { advancePaymentService } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2, Plus, Pencil, Trash2 } from "lucide-react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -17,6 +17,12 @@ function AdvancePaymentsPage() {
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
+
+    // Get user from local storage
+    const userJson = localStorage.getItem('user')
+    const user = userJson ? JSON.parse(userJson) : null
+    // Assuming role or is_staff is available in user object
+    const isAdminOrManager = user && (['admin', 'manager', 'superuser'].includes(user.role) || user.is_staff || user.is_superuser)
 
     useEffect(() => {
         fetchPayments()
@@ -33,6 +39,26 @@ function AdvancePaymentsPage() {
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("Are you sure you want to delete this advance payment?")) return
+
+        try {
+            await advancePaymentService.deleteAdvancePayment(id)
+            toast.success("Advance payment deleted")
+            fetchPayments()
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Failed to delete advance payment")
+        }
+    }
+
+    const canEditOrDelete = (payment: any) => {
+        if (isAdminOrManager) return true;
+        const created = new Date(payment.created_at).getTime();
+        const now = new Date().getTime();
+        const diffMinutes = (now - created) / 60000;
+        return diffMinutes <= 30;
     }
 
     return (
@@ -56,9 +82,11 @@ function AdvancePaymentsPage() {
                             <div className="flex items-center justify-between">
                                 <div>
                                     <CardTitle>Advance Payments</CardTitle>
-                                    <CardDescription>Customer advance payments</CardDescription>
+                                    <CardDescription>Manage customer advance payments and wallet balances</CardDescription>
                                 </div>
-                                <Button onClick={() => navigate("/billing/advance-payments/add")}><Plus className="mr-2 h-4 w-4" />Add Advance Payment</Button>
+                                <Button onClick={() => navigate("/billing/advance-payments/add")}>
+                                    <Plus className="mr-2 h-4 w-4" />Add Advance
+                                </Button>
                             </div>
                         </CardHeader>
                         <CardContent>
@@ -70,13 +98,13 @@ function AdvancePaymentsPage() {
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
-                                                    <TableHead>Advance Number</TableHead>
+                                                    <TableHead>No.</TableHead>
                                                     <TableHead>Customer</TableHead>
+                                                    <TableHead>Date</TableHead>
                                                     <TableHead>Amount</TableHead>
-                                                    <TableHead>Months Covered</TableHead>
                                                     <TableHead>Used</TableHead>
                                                     <TableHead>Remaining</TableHead>
-                                                    <TableHead>Payment Date</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -85,13 +113,37 @@ function AdvancePaymentsPage() {
                                                 ) : (
                                                     payments.map((payment) => (
                                                         <TableRow key={payment.id}>
-                                                            <TableCell className="font-medium">{payment.advance_number}</TableCell>
-                                                            <TableCell>{payment.subscription_customer}</TableCell>
-                                                            <TableCell>৳{payment.amount}</TableCell>
-                                                            <TableCell>{payment.months_covered}</TableCell>
-                                                            <TableCell>৳{payment.used_amount}</TableCell>
-                                                            <TableCell>৳{payment.remaining_balance}</TableCell>
+                                                            <TableCell className="font-medium text-xs">{payment.advance_number}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex flex-col">
+                                                                    <span>{payment.customer_name}</span>
+                                                                    <span className="text-xs text-muted-foreground">{payment.customer_phone}</span>
+                                                                </div>
+                                                            </TableCell>
                                                             <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
+                                                            <TableCell className="font-medium">৳{payment.amount}</TableCell>
+                                                            <TableCell className="text-muted-foreground">৳{payment.used_amount}</TableCell>
+                                                            <TableCell className="text-green-600 font-medium">৳{payment.remaining_balance}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                {canEditOrDelete(payment) && (
+                                                                    <div className="flex justify-end gap-2">
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => navigate(`/billing/advance-payments/${payment.id}/edit`)}
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => handleDelete(payment.id)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                                        </Button>
+                                                                    </div>
+                                                                )}
+                                                            </TableCell>
                                                         </TableRow>
                                                     ))
                                                 )}
