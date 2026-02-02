@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { subscriptionService, connectionFeeService } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react"
+import { Loader2, ArrowLeft, Pencil, Plus, Trash2, Wallet } from "lucide-react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -39,11 +39,30 @@ function SubscriptionDetailPage() {
     const [loading, setLoading] = useState(true)
     const [showFeeDialog, setShowFeeDialog] = useState(false)
     const [isSubmittingFee, setIsSubmittingFee] = useState(false)
-    const [newFee, setNewFee] = useState({
+    const [newFee, setNewFee] = useState<{
+        fee_type: string;
+        amount: string;
+        date: string;
+        is_paid: boolean;
+        notes: string;
+        payment_method?: string;
+        transaction_id?: string;
+    }>({
         fee_type: "connection",
         amount: "",
         date: new Date().toISOString().split('T')[0],
         is_paid: false,
+        notes: "",
+        payment_method: "cash",
+        transaction_id: ""
+    })
+
+    // Payment Dialog State
+    const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+    const [selectedFee, setSelectedFee] = useState<any>(null)
+    const [paymentData, setPaymentData] = useState({
+        payment_method: "cash",
+        transaction_id: "",
         notes: ""
     })
 
@@ -81,7 +100,9 @@ function SubscriptionDetailPage() {
                 amount: "",
                 date: new Date().toISOString().split('T')[0],
                 is_paid: false,
-                notes: ""
+                notes: "",
+                payment_method: "cash",
+                transaction_id: ""
             })
         } catch (error) {
             console.error(error)
@@ -99,6 +120,34 @@ function SubscriptionDetailPage() {
             fetchSubscription()
         } catch (error) {
             toast.error("Failed to delete fee")
+        }
+    }
+
+    const handleOpenPayment = (fee: any) => {
+        setSelectedFee(fee)
+        setPaymentData({
+            payment_method: "cash",
+            transaction_id: "",
+            notes: ""
+        })
+        setShowPaymentDialog(true)
+    }
+
+    const handleMarkPaid = async () => {
+        if (!selectedFee) return
+
+        try {
+            await connectionFeeService.updateConnectionFee(selectedFee.id, {
+                is_paid: true,
+                payment_method: paymentData.payment_method,
+                transaction_id: paymentData.transaction_id,
+                notes: paymentData.notes
+            })
+            toast.success("Connection fee marked as paid")
+            setShowPaymentDialog(false)
+            fetchSubscription()
+        } catch (error: any) {
+            toast.error("Failed to update connection fee")
         }
     }
 
@@ -231,6 +280,7 @@ function SubscriptionDetailPage() {
                                         <TableHead>Type</TableHead>
                                         <TableHead>Amount</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Received By</TableHead>
                                         <TableHead>Notes</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
@@ -247,24 +297,37 @@ function SubscriptionDetailPage() {
                                                         {fee.is_paid ? "Paid" : "Unpaid"}
                                                     </Badge>
                                                 </TableCell>
+                                                <TableCell>{fee.received_by_name || '-'}</TableCell>
                                                 <TableCell className="max-w-[200px] truncate" title={fee.notes}>
                                                     {fee.notes || "-"}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-destructive"
-                                                        onClick={() => handleDeleteFee(fee.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    <div className="flex justify-end gap-2">
+                                                        {!fee.is_paid && (
+                                                            <Button
+                                                                size="sm"
+                                                                className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                                                onClick={() => handleOpenPayment(fee)}
+                                                            >
+                                                                <Wallet className="mr-1 h-3 w-3" />
+                                                                Pay
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive"
+                                                            onClick={() => handleDeleteFee(fee.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                            <TableCell colSpan={7} className="text-center text-muted-foreground">
                                                 No fees recorded
                                             </TableCell>
                                         </TableRow>
@@ -275,6 +338,7 @@ function SubscriptionDetailPage() {
                     </Card>
                 </div>
 
+                {/* Add Fee Dialog */}
                 <Dialog open={showFeeDialog} onOpenChange={setShowFeeDialog}>
                     <DialogContent>
                         <DialogHeader>
@@ -330,6 +394,40 @@ function SubscriptionDetailPage() {
                                 />
                                 <Label htmlFor="is_paid">Mark as Paid</Label>
                             </div>
+
+                            {newFee.is_paid && (
+                                <div className="grid grid-cols-2 gap-4 pl-6 border-l-2 border-muted">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="payment_method">Payment Method</Label>
+                                        <Select
+                                            value={newFee.payment_method || "cash"}
+                                            onValueChange={(value) => setNewFee({ ...newFee, payment_method: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="cash">Cash</SelectItem>
+                                                <SelectItem value="bkash">bKash</SelectItem>
+                                                <SelectItem value="nagad">Nagad</SelectItem>
+                                                <SelectItem value="rocket">Rocket</SelectItem>
+                                                <SelectItem value="bank">Bank Transfer</SelectItem>
+                                                <SelectItem value="card">Card</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="transaction_id">Transaction ID</Label>
+                                        <Input
+                                            id="transaction_id"
+                                            value={newFee.transaction_id || ""}
+                                            onChange={(e) => setNewFee({ ...newFee, transaction_id: e.target.value })}
+                                            placeholder="Optional"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <Label htmlFor="notes">Notes</Label>
                                 <Textarea
@@ -349,6 +447,65 @@ function SubscriptionDetailPage() {
                                 </Button>
                             </DialogFooter>
                         </form>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Mark as Paid Dialog (Payment Dialog) */}
+                <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Receive Payment</DialogTitle>
+                            <DialogDescription>
+                                Receive payment for {selectedFee?.fee_type_display} of ৳{selectedFee?.amount}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label>Received By</Label>
+                                <Input
+                                    value="You (Current User)"
+                                    disabled
+                                    className="bg-muted"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Payment Method</Label>
+                                <Select value={paymentData.payment_method} onValueChange={(v) => setPaymentData({ ...paymentData, payment_method: v })}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="bkash">bKash</SelectItem>
+                                        <SelectItem value="nagad">Nagad</SelectItem>
+                                        <SelectItem value="rocket">Rocket</SelectItem>
+                                        <SelectItem value="bank">Bank Transfer</SelectItem>
+                                        <SelectItem value="card">Card</SelectItem>
+                                        <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Transaction ID (Optional)</Label>
+                                <Input
+                                    value={paymentData.transaction_id}
+                                    onChange={(e) => setPaymentData({ ...paymentData, transaction_id: e.target.value })}
+                                    placeholder="Enter transaction ID"
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Notes (Optional)</Label>
+                                <Input
+                                    value={paymentData.notes}
+                                    onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
+                                    placeholder="Enter notes"
+                                />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>Cancel</Button>
+                            <Button onClick={handleMarkPaid}>Confirm Payment</Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
             </SidebarInset>

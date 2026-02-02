@@ -62,9 +62,18 @@ const data = {
       ],
     },
     {
-      title: "Zones",
-      url: "/zones",
-      icon: IconDatabase,
+      title: "Configure",
+      icon: IconSettings,
+      items: [
+        {
+          title: "Zones",
+          url: "/zones",
+        },
+        {
+          title: "Connection Types",
+          url: "/connection-types",
+        },
+      ],
     },
     {
       title: "MikroTik",
@@ -112,6 +121,10 @@ const data = {
         {
           title: "Discounts",
           url: "/billing/discounts",
+        },
+        {
+          title: "Connection Fees",
+          url: "/billing/connection-fees",
         },
         {
           title: "Refunds",

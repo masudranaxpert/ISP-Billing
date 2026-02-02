@@ -83,6 +83,26 @@ export const customerService = {
     searchCustomers: async (params?: any) => {
         const response = await apiClient.get('/customers/search/', { params });
         return response.data;
+    },
+    getConnectionTypes: async (params?: any) => {
+        const response = await apiClient.get('/connection-types/', { params });
+        return response.data;
+    },
+    getConnectionType: async (id: number) => {
+        const response = await apiClient.get(`/connection-types/${id}/`);
+        return response.data;
+    },
+    createConnectionType: async (data: any) => {
+        const response = await apiClient.post('/connection-types/', data);
+        return response.data;
+    },
+    updateConnectionType: async (id: number, data: any) => {
+        const response = await apiClient.patch(`/connection-types/${id}/`, data);
+        return response.data;
+    },
+    deleteConnectionType: async (id: number) => {
+        const response = await apiClient.delete(`/connection-types/${id}/`);
+        return response.data;
     }
 };
 

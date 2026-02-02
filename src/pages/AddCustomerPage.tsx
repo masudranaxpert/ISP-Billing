@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { customerService, zoneService } from "@/services/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,8 +40,12 @@ import 'react-phone-number-input/style.css'
 
 function AddCustomerPage() {
     const navigate = useNavigate()
+    const { id } = useParams()
+    const isEditMode = !!id
+
     const [loading, setLoading] = useState(false)
     const [zones, setZones] = useState<any[]>([])
+    const [connectionTypes, setConnectionTypes] = useState<any[]>([])
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -51,23 +55,57 @@ function AddCustomerPage() {
         address: "",
         zone: "",
         billing_type: "personal",
-        connection_type: "pppoe",
+        connection_type: "",
         mac_address: "",
         static_ip: "",
         status: "active",
     })
 
     useEffect(() => {
-        fetchZones()
+        fetchInitialData()
     }, [])
 
-    const fetchZones = async () => {
+    useEffect(() => {
+        if (isEditMode) {
+            fetchCustomer()
+        }
+    }, [id])
+
+    const fetchInitialData = async () => {
         try {
-            const response = await zoneService.getZones()
-            setZones(response.results || [])
+            const [zonesRes, connTypesRes] = await Promise.all([
+                zoneService.getZones(),
+                customerService.getConnectionTypes()
+            ])
+            setZones(zonesRes.results || [])
+            setConnectionTypes(connTypesRes.results || [])
         } catch (error) {
-            console.error("Failed to fetch zones", error)
-            toast.error("Failed to load zones")
+            console.error("Failed to fetch initial data", error)
+            toast.error("Failed to load form data")
+        }
+    }
+
+    const fetchCustomer = async () => {
+        try {
+            const customer = await customerService.getCustomer(parseInt(id!))
+            setFormData({
+                name: customer.name,
+                email: customer.email || "",
+                phone: customer.phone,
+                alternative_phone: customer.alternative_phone || "",
+                nid: customer.nid || "",
+                address: customer.address || "",
+                zone: customer.zone ? customer.zone.toString() : "",
+                billing_type: customer.billing_type || "personal",
+                connection_type: customer.connection_type ? customer.connection_type.toString() : "",
+                mac_address: customer.mac_address || "",
+                static_ip: customer.static_ip || "",
+                status: customer.status || "active",
+            })
+        } catch (error) {
+            console.error("Failed to fetch customer", error)
+            toast.error("Failed to load customer details")
+            navigate("/customers")
         }
     }
 
@@ -97,26 +135,35 @@ function AddCustomerPage() {
                     ? formatPhoneNumber(formData.alternative_phone)
                     : null,
                 zone: formData.zone ? parseInt(formData.zone) : null,
+                connection_type: formData.connection_type ? parseInt(formData.connection_type) : null,
                 email: formData.email || null,
                 nid: formData.nid || null,
                 mac_address: formData.mac_address || null,
                 static_ip: formData.static_ip || null,
             }
-            await customerService.createCustomer(payload)
-            toast.success("Customer created successfully!")
+
+            if (isEditMode) {
+                await customerService.updateCustomer(parseInt(id!), payload)
+                toast.success("Customer updated successfully!")
+            } else {
+                await customerService.createCustomer(payload)
+                toast.success("Customer created successfully!")
+            }
             navigate("/customers")
         } catch (error: any) {
-            console.error("Failed to create customer", error)
+            console.error("Failed to save customer", error)
             if (error.response?.data) {
                 const errors = error.response.data
                 Object.keys(errors).forEach(key => {
                     const errorMsg = Array.isArray(errors[key])
                         ? errors[key].join(", ")
                         : errors[key]
-                    toast.error(`${key}: ${errorMsg}`)
+                    // Capitalize key
+                    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                    toast.error(`${displayKey}: ${errorMsg}`)
                 })
             } else {
-                toast.error("Failed to create customer")
+                toast.error(`Failed to ${isEditMode ? 'update' : 'create'} customer`)
             }
         } finally {
             setLoading(false)
@@ -142,7 +189,7 @@ function AddCustomerPage() {
                                 </BreadcrumbItem>
                                 <BreadcrumbSeparator className="hidden md:block" />
                                 <BreadcrumbItem>
-                                    <BreadcrumbPage>Add Customer</BreadcrumbPage>
+                                    <BreadcrumbPage>{isEditMode ? 'Edit Customer' : 'Add Customer'}</BreadcrumbPage>
                                 </BreadcrumbItem>
                             </BreadcrumbList>
                         </Breadcrumb>
@@ -162,9 +209,9 @@ function AddCustomerPage() {
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Add New Customer</CardTitle>
+                                <CardTitle>{isEditMode ? 'Edit Customer' : 'Add New Customer'}</CardTitle>
                                 <CardDescription>
-                                    Fill in the customer details below
+                                    {isEditMode ? 'Update customer details below' : 'Fill in the customer details below'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -281,12 +328,14 @@ function AddCustomerPage() {
                                                     }
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue />
+                                                        <SelectValue placeholder="Select type" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="pppoe">PPPoE</SelectItem>
-                                                        <SelectItem value="static_ip">Static IP</SelectItem>
-                                                        <SelectItem value="hotspot">Hotspot</SelectItem>
+                                                        {connectionTypes.map((type) => (
+                                                            <SelectItem key={type.id} value={type.id.toString()}>
+                                                                {type.name}
+                                                            </SelectItem>
+                                                        ))}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -339,7 +388,7 @@ function AddCustomerPage() {
                                             className="cursor-pointer"
                                         >
                                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                            Create Customer
+                                            {isEditMode ? 'Update Customer' : 'Create Customer'}
                                         </Button>
                                         <Button
                                             type="button"

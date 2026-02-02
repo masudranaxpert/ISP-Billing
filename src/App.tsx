@@ -10,6 +10,7 @@ import CustomerDetailPage from "@/pages/CustomerDetailPage"
 import ZonesPage from "@/pages/ZonesPage"
 import AddZonePage from "@/pages/AddZonePage"
 import ZoneDetailPage from "@/pages/ZoneDetailPage"
+import ConnectionTypesPage from "@/pages/ConnectionTypesPage"
 import RoutersPage from "@/pages/mikrotik/RoutersPage"
 import AddRouterPage from "@/pages/mikrotik/AddRouterPage"
 import QueueProfilesPage from "@/pages/mikrotik/QueueProfilesPage"
@@ -29,6 +30,8 @@ import AddDiscountPage from "@/pages/billing/AddDiscountPage"
 import AddRefundPage from "@/pages/billing/AddRefundPage"
 import AddBillPage from "@/pages/billing/AddBillPage"
 import BillDetailPage from "@/pages/billing/BillDetailPage"
+import AddPaymentPage from "@/pages/billing/AddPaymentPage"
+import ConnectionFeesPage from "@/pages/billing/ConnectionFeesPage"
 import AddAdvancePaymentPage from "@/pages/billing/AddAdvancePaymentPage"
 import SettingsPage from "@/pages/SettingsPage"
 import UsersPage from "@/pages/UsersPage"
@@ -51,9 +54,11 @@ function App() {
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/customers/add" element={<AddCustomerPage />} />
           <Route path="/customers/:id" element={<CustomerDetailPage />} />
+          <Route path="/customers/:id/edit" element={<AddCustomerPage />} />
           <Route path="/zones" element={<ZonesPage />} />
           <Route path="/zones/add" element={<AddZonePage />} />
           <Route path="/zones/:id" element={<ZoneDetailPage />} />
+          <Route path="/connection-types" element={<ConnectionTypesPage />} />
           <Route path="/mikrotik/routers" element={<RoutersPage />} />
           <Route path="/mikrotik/routers/add" element={<AddRouterPage />} />
           <Route path="/mikrotik/routers/:id" element={<AddRouterPage />} />
@@ -70,6 +75,8 @@ function App() {
           <Route path="/bills/add" element={<AddBillPage />} />
           <Route path="/bills/:id" element={<BillDetailPage />} />
           <Route path="/billing/payments" element={<PaymentsPage />} />
+          <Route path="/billing/payments/add" element={<AddPaymentPage />} />
+          <Route path="/billing/connection-fees" element={<ConnectionFeesPage />} />
           <Route path="/billing/invoices" element={<InvoicesPage />} />
           <Route path="/billing/advance-payments" element={<AdvancePaymentsPage />} />
           <Route path="/billing/advance-payments/add" element={<AddAdvancePaymentPage />} />

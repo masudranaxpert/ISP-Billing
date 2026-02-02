@@ -190,7 +190,7 @@ function CustomersPage() {
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        onClick={() => navigate(`/customers/${customer.id}`)}
+                                                                        onClick={() => navigate(`/customers/${customer.id}/edit`)}
                                                                         title="Edit"
                                                                     >
                                                                         <Pencil className="h-4 w-4" />

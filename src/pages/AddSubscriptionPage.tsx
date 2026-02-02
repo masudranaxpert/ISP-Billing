@@ -61,12 +61,22 @@ function AddSubscriptionPage() {
 
     // Fee State
     const [fees, setFees] = useState<any[]>([])
-    const [newFee, setNewFee] = useState({
+    const [newFee, setNewFee] = useState<{
+        fee_type: string;
+        amount: string;
+        date: string;
+        is_paid: boolean;
+        notes: string;
+        payment_method?: string;
+        transaction_id?: string;
+    }>({
         fee_type: "connection",
         amount: "",
         date: new Date().toISOString().split('T')[0],
         is_paid: false,
-        notes: ""
+        notes: "",
+        payment_method: "cash",
+        transaction_id: ""
     })
 
     const [formData, setFormData] = useState({
@@ -128,8 +138,25 @@ function AddSubscriptionPage() {
                 mikrotik_password: data.mikrotik_password,
                 status: data.status,
             })
-            // Fetch connection fees if any (for edit mode - though typical use is adding new fees)
-            // Currently assuming fees are only added on creation or via details page.
+
+            // Fetch profiles if router is selected
+            if (data.router) {
+                const routerId = (data.router.id || data.router).toString()
+                await fetchProfiles(routerId)
+            }
+
+            // Set existing fees
+            if (data.connection_fees && Array.isArray(data.connection_fees)) {
+                setFees(data.connection_fees)
+            }
+
+            // Set package price
+            if (data.package) {
+                if (data.package.price) {
+                    setSelectedPackagePrice(data.package.price)
+                }
+            }
+
         } catch (error) {
             console.error(error)
             toast.error("Failed to fetch subscription details")
@@ -191,7 +218,9 @@ function AddSubscriptionPage() {
             amount: "",
             date: new Date().toISOString().split('T')[0],
             is_paid: false,
-            notes: ""
+            notes: "",
+            payment_method: "cash",
+            transaction_id: ""
         })
         setShowFeeDialog(false)
         toast.success("Fee added to list")
@@ -228,6 +257,11 @@ function AddSubscriptionPage() {
             }
 
             if (isEditMode) {
+                // Note: Updating subscription fees usually happens via add logic, 
+                // but if the backend supports updating the full list, this will work.
+                // However, standard DRF update on nested writable fields can be tricky.
+                // Given the current backend, we might only be updating core fields.
+                // If fees need to be synced, the backend serializer needs to handle nested writes for update.
                 await subscriptionService.updateSubscription(parseInt(id!), payload)
                 toast.success("Subscription updated successfully!")
             } else {
@@ -505,7 +539,7 @@ function AddSubscriptionPage() {
                                                         <tbody className="divide-y">
                                                             {fees.map((fee, index) => (
                                                                 <tr key={index}>
-                                                                    <td className="px-4 py-2 capitalize">{fee.fee_type === 'connection' ? 'Connection Fee' : fee.fee_type === 'reconnection' ? 'Reconnection Fee' : 'Other Fee'}</td>
+                                                                    <td className="px-4 py-2 capitalize">{fee.fee_type_display || (fee.fee_type === 'connection' ? 'Connection Fee' : fee.fee_type === 'reconnection' ? 'Reconnection Fee' : 'Other Fee')}</td>
                                                                     <td className="px-4 py-2">৳{fee.amount}</td>
                                                                     <td className="px-4 py-2">{fee.date}</td>
                                                                     <td className="px-4 py-2">
@@ -514,15 +548,17 @@ function AddSubscriptionPage() {
                                                                         </span>
                                                                     </td>
                                                                     <td className="px-4 py-2 text-right">
-                                                                        <Button
-                                                                            type="button"
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-6 w-6 text-destructive"
-                                                                            onClick={() => removeFee(index)}
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </Button>
+                                                                        {!fee.is_paid && (
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-6 w-6 text-destructive"
+                                                                                onClick={() => removeFee(index)}
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -631,6 +667,41 @@ function AddSubscriptionPage() {
                                 />
                                 <Label htmlFor="is_paid">Mark as Paid</Label>
                             </div>
+
+                            {newFee.is_paid && (
+                                <div className="grid grid-cols-2 gap-4 pl-6 border-l-2 border-muted">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="payment_method">Payment Method</Label>
+                                        <Select
+                                            value={newFee.payment_method || "cash"}
+                                            onValueChange={(value) => setNewFee({ ...newFee, payment_method: value })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="cash">Cash</SelectItem>
+                                                <SelectItem value="bkash">bKash</SelectItem>
+                                                <SelectItem value="nagad">Nagad</SelectItem>
+                                                <SelectItem value="rocket">Rocket</SelectItem>
+                                                <SelectItem value="bank">Bank Transfer</SelectItem>
+                                                <SelectItem value="card">Card</SelectItem>
+                                                <SelectItem value="other">Other</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="transaction_id">Transaction ID</Label>
+                                        <Input
+                                            id="transaction_id"
+                                            value={newFee.transaction_id || ""}
+                                            onChange={(e) => setNewFee({ ...newFee, transaction_id: e.target.value })}
+                                            placeholder="Optional"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="space-y-2">
                                 <Label htmlFor="notes">Notes</Label>
                                 <Textarea
