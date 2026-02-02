@@ -26,7 +26,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { Loader2, ArrowLeft } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Loader2, ArrowLeft, Plus, Trash2 } from "lucide-react"
+
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import {
     SidebarInset,
@@ -53,7 +56,19 @@ function AddSubscriptionPage() {
     const [profiles, setProfiles] = useState<any[]>([])
     const [loadingProfiles, setLoadingProfiles] = useState(false)
     const [showForceLinkDialog, setShowForceLinkDialog] = useState(false)
+    const [showFeeDialog, setShowFeeDialog] = useState(false)
     const [selectedPackagePrice, setSelectedPackagePrice] = useState<string>("")
+
+    // Fee State
+    const [fees, setFees] = useState<any[]>([])
+    const [newFee, setNewFee] = useState({
+        fee_type: "connection",
+        amount: "",
+        date: new Date().toISOString().split('T')[0],
+        is_paid: false,
+        notes: ""
+    })
+
     const [formData, setFormData] = useState({
         customer: "",
         package: "",
@@ -65,8 +80,6 @@ function AddSubscriptionPage() {
         mikrotik_profile_name: "",
         mikrotik_username: "",
         mikrotik_password: "",
-        connection_fee: "",
-        reconnection_fee: "",
         status: "active",
     })
 
@@ -113,10 +126,10 @@ function AddSubscriptionPage() {
                 mikrotik_profile_name: data.mikrotik_profile_name || "",
                 mikrotik_username: data.mikrotik_username,
                 mikrotik_password: data.mikrotik_password,
-                connection_fee: data.connection_fee ? data.connection_fee.toString() : "",
-                reconnection_fee: data.reconnection_fee ? data.reconnection_fee.toString() : "",
                 status: data.status,
             })
+            // Fetch connection fees if any (for edit mode - though typical use is adding new fees)
+            // Currently assuming fees are only added on creation or via details page.
         } catch (error) {
             console.error(error)
             toast.error("Failed to fetch subscription details")
@@ -167,6 +180,29 @@ function AddSubscriptionPage() {
         }
     }
 
+    const handleAddFee = () => {
+        if (!newFee.amount) {
+            toast.error("Please enter an amount")
+            return
+        }
+        setFees([...fees, newFee])
+        setNewFee({
+            fee_type: "connection",
+            amount: "",
+            date: new Date().toISOString().split('T')[0],
+            is_paid: false,
+            notes: ""
+        })
+        setShowFeeDialog(false)
+        toast.success("Fee added to list")
+    }
+
+    const removeFee = (index: number) => {
+        const newFees = [...fees]
+        newFees.splice(index, 1)
+        setFees(newFees)
+    }
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         createSubscription(false)
@@ -186,15 +222,12 @@ function AddSubscriptionPage() {
                 mikrotik_profile_name: formData.mikrotik_profile_name || null,
                 mikrotik_username: formData.mikrotik_username,
                 mikrotik_password: formData.mikrotik_password,
-                connection_fee: formData.connection_fee || null,
-                reconnection_fee: formData.reconnection_fee || null,
                 status: formData.status,
                 force_link: forceLink,
+                fees: fees // Include fees in the payload
             }
 
             if (isEditMode) {
-                // If update, we might not send password if it's empty to avoid reset?
-                // But simplified for now.
                 await subscriptionService.updateSubscription(parseInt(id!), payload)
                 toast.success("Subscription updated successfully!")
             } else {
@@ -449,27 +482,58 @@ function AddSubscriptionPage() {
                                                 placeholder="Strong password"
                                             />
                                         </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="connection_fee">Connection Fee (৳)</Label>
-                                            <Input
-                                                id="connection_fee"
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.connection_fee}
-                                                onChange={(e) => handleChange("connection_fee", e.target.value)}
-                                                placeholder="0.00"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="reconnection_fee">Reconnection Fee (৳)</Label>
-                                            <Input
-                                                id="reconnection_fee"
-                                                type="number"
-                                                step="0.01"
-                                                value={formData.reconnection_fee}
-                                                onChange={(e) => handleChange("reconnection_fee", e.target.value)}
-                                                placeholder="0.00"
-                                            />
+                                        <div className="space-y-4 md:col-span-2">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-base">Connection Fees</Label>
+                                                <Button type="button" size="sm" variant="outline" onClick={() => setShowFeeDialog(true)}>
+                                                    <Plus className="mr-2 h-4 w-4" /> Add Fee
+                                                </Button>
+                                            </div>
+
+                                            {fees.length > 0 ? (
+                                                <div className="border rounded-md overflow-hidden">
+                                                    <table className="w-full text-sm">
+                                                        <thead className="bg-muted">
+                                                            <tr>
+                                                                <th className="px-4 py-2 text-left font-medium">Type</th>
+                                                                <th className="px-4 py-2 text-left font-medium">Amount</th>
+                                                                <th className="px-4 py-2 text-left font-medium">Date</th>
+                                                                <th className="px-4 py-2 text-left font-medium">Status</th>
+                                                                <th className="px-4 py-2 text-right font-medium">Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y">
+                                                            {fees.map((fee, index) => (
+                                                                <tr key={index}>
+                                                                    <td className="px-4 py-2 capitalize">{fee.fee_type === 'connection' ? 'Connection Fee' : fee.fee_type === 'reconnection' ? 'Reconnection Fee' : 'Other Fee'}</td>
+                                                                    <td className="px-4 py-2">৳{fee.amount}</td>
+                                                                    <td className="px-4 py-2">{fee.date}</td>
+                                                                    <td className="px-4 py-2">
+                                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${fee.is_paid ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                                                            {fee.is_paid ? "Paid" : "Unpaid"}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-4 py-2 text-right">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-6 w-6 text-destructive"
+                                                                            onClick={() => removeFee(index)}
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 border rounded-md bg-muted/30 text-center text-sm text-muted-foreground">
+                                                    No fees added yet. Click "Add Fee" to add connection or other charges.
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="status">Status</Label>
@@ -512,6 +576,82 @@ function AddSubscriptionPage() {
                         </Card>
                     </div>
                 </div>
+
+                {/* Fee Dialog */}
+                <Dialog open={showFeeDialog} onOpenChange={setShowFeeDialog}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add Fee</DialogTitle>
+                            <DialogDescription>
+                                Add a fee to this subscription
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="fee_type">Fee Type</Label>
+                                <Select
+                                    value={newFee.fee_type}
+                                    onValueChange={(value) => setNewFee({ ...newFee, fee_type: value })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="connection">New Connection Fee</SelectItem>
+                                        <SelectItem value="reconnection">Reconnection Fee</SelectItem>
+                                        <SelectItem value="other">Other Fee</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="amount">Amount (৳)</Label>
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    step="0.01"
+                                    value={newFee.amount}
+                                    onChange={(e) => setNewFee({ ...newFee, amount: e.target.value })}
+                                    placeholder="0.00"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="date">Date</Label>
+                                <Input
+                                    id="date"
+                                    type="date"
+                                    value={newFee.date}
+                                    onChange={(e) => setNewFee({ ...newFee, date: e.target.value })}
+                                />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox
+                                    id="is_paid"
+                                    checked={newFee.is_paid}
+                                    onCheckedChange={(checked) => setNewFee({ ...newFee, is_paid: checked as boolean })}
+                                />
+                                <Label htmlFor="is_paid">Mark as Paid</Label>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="notes">Notes</Label>
+                                <Textarea
+                                    id="notes"
+                                    value={newFee.notes}
+                                    onChange={(e) => setNewFee({ ...newFee, notes: e.target.value })}
+                                    placeholder="Optional notes..."
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setShowFeeDialog(false)}>
+                                    Cancel
+                                </Button>
+                                <Button type="button" onClick={handleAddFee}>
+                                    Add Fee
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
                 <Dialog open={showForceLinkDialog} onOpenChange={setShowForceLinkDialog}>
                     <DialogContent>
                         <DialogHeader>

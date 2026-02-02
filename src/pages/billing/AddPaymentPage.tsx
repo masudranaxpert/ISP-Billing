@@ -115,6 +115,14 @@ export default function AddPaymentPage() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
+                                        <Label>Received By</Label>
+                                        <Input
+                                            value="You (Current User)"
+                                            disabled
+                                            className="bg-muted"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
                                         <Label>Amount</Label>
                                         <Input
                                             type="number"
@@ -124,6 +132,9 @@ export default function AddPaymentPage() {
                                             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                                         />
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Payment Method</Label>
                                         <Select
@@ -142,9 +153,6 @@ export default function AddPaymentPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label>Payment Date</Label>
                                         <Input
@@ -154,14 +162,15 @@ export default function AddPaymentPage() {
                                             onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Transaction ID</Label>
-                                        <Input
-                                            placeholder="Optional"
-                                            value={formData.transaction_id}
-                                            onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
-                                        />
-                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>Transaction ID</Label>
+                                    <Input
+                                        placeholder="Optional"
+                                        value={formData.transaction_id}
+                                        onChange={(e) => setFormData({ ...formData, transaction_id: e.target.value })}
+                                    />
                                 </div>
 
                                 <div className="space-y-2">

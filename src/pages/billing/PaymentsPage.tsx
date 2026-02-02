@@ -92,13 +92,14 @@ function PaymentsPage() {
                                                     <TableHead>Method</TableHead>
                                                     <TableHead>Date</TableHead>
                                                     <TableHead>Transaction ID</TableHead>
+                                                    <TableHead>Received By</TableHead>
                                                     <TableHead>Status</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {payments.length === 0 ? (
-                                                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No payments found</TableCell></TableRow>
+                                                    <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No payments found</TableCell></TableRow>
                                                 ) : (
                                                     payments.map((payment) => (
                                                         <TableRow key={payment.id}>
@@ -108,6 +109,7 @@ function PaymentsPage() {
                                                             <TableCell>{payment.payment_method_display}</TableCell>
                                                             <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
                                                             <TableCell>{payment.transaction_id || "-"}</TableCell>
+                                                            <TableCell>{payment.received_by_name || "-"}</TableCell>
                                                             <TableCell>{getStatusBadge(payment.status)}</TableCell>
                                                             <TableCell className="text-right">
                                                                 <Button variant="ghost" size="icon" onClick={() => navigate(`/billing/payments/${payment.id}`)}><Eye className="h-4 w-4" /></Button>

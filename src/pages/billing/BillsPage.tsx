@@ -341,6 +341,14 @@ function BillsPage() {
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
+                                <Label>Received By</Label>
+                                <Input
+                                    value="You (Current User)"
+                                    disabled
+                                    className="bg-muted"
+                                />
+                            </div>
+                            <div className="grid gap-2">
                                 <Label>Amount (৳)</Label>
                                 <Input
                                     type="number"

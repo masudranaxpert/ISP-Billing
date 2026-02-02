@@ -225,6 +225,25 @@ export const subscriptionService = {
     }
 };
 
+export const connectionFeeService = {
+    getConnectionFees: async (params?: any) => {
+        const response = await apiClient.get('/connection-fees/', { params });
+        return response.data;
+    },
+    createConnectionFee: async (data: any) => {
+        const response = await apiClient.post('/connection-fees/', data);
+        return response.data;
+    },
+    deleteConnectionFee: async (id: number) => {
+        const response = await apiClient.delete(`/connection-fees/${id}/`);
+        return response.data;
+    },
+    updateConnectionFee: async (id: number, data: any) => {
+        const response = await apiClient.patch(`/connection-fees/${id}/`, data);
+        return response.data;
+    }
+};
+
 export const billService = {
     getBills: async (params?: any) => {
         const response = await apiClient.get('/bills/', { params });

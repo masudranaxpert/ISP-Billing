@@ -121,12 +121,15 @@ function SchedulePage() {
     const handleEdit = (config: any) => {
         setSelectedConfig(config)
 
-        // Determine initial mode based on API data
-        // If it's MONTHLY (unit='months'), set defaults
+        // For monthly bills, force 'months' unit
+        let unit = config.interval_unit || 'minutes'
+        if (config.job_id === 'generate_monthly_bills') {
+            unit = 'months'
+        }
 
         setEditForm({
             interval_value: config.interval_value || 1,
-            interval_unit: config.interval_unit || 'minutes',
+            interval_unit: unit,
             schedule_time: config.schedule_time || '',
             day_of_month: config.day_of_month || 1,
             is_enabled: config.is_enabled
@@ -492,7 +495,7 @@ function SchedulePage() {
                             )}
 
                             {/* CASE: Interval Mode */}
-                            {editForm.interval_unit !== 'days' && editForm.interval_unit !== 'months' && (
+                            {editForm.interval_unit !== 'days' && editForm.interval_unit !== 'months' && selectedConfig?.job_id !== 'generate_monthly_bills' && (
                                 <div className="grid gap-4 animate-in fade-in zoom-in-95 duration-200">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
