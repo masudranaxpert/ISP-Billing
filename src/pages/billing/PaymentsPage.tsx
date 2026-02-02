@@ -106,7 +106,14 @@ function PaymentsPage() {
                                                             <TableCell className="font-medium">{payment.payment_number}</TableCell>
                                                             <TableCell>{payment.bill_number}</TableCell>
                                                             <TableCell>৳{payment.amount}</TableCell>
-                                                            <TableCell>{payment.payment_method_display}</TableCell>
+                                                            <TableCell>
+                                                                {payment.payment_method_display}
+                                                                {payment.advance_number && (
+                                                                    <span className="block text-xs text-muted-foreground mt-0.5">
+                                                                        Adv: {payment.advance_number}
+                                                                    </span>
+                                                                )}
+                                                            </TableCell>
                                                             <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
                                                             <TableCell>{payment.transaction_id || "-"}</TableCell>
                                                             <TableCell>{payment.received_by_name || "-"}</TableCell>

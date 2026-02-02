@@ -80,6 +80,7 @@ function App() {
           <Route path="/billing/invoices" element={<InvoicesPage />} />
           <Route path="/billing/advance-payments" element={<AdvancePaymentsPage />} />
           <Route path="/billing/advance-payments/add" element={<AddAdvancePaymentPage />} />
+          <Route path="/billing/advance-payments/:id/edit" element={<AddAdvancePaymentPage />} />
           <Route path="/billing/discounts" element={<DiscountsPage />} />
           <Route path="/billing/discounts/add" element={<AddDiscountPage />} />
           <Route path="/billing/refunds" element={<RefundsPage />} />

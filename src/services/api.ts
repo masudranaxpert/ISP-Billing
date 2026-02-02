@@ -337,6 +337,14 @@ export const advancePaymentService = {
     createAdvancePayment: async (data: any) => {
         const response = await apiClient.post('/advance-payments/create/', data);
         return response.data;
+    },
+    updateAdvancePayment: async (id: number, data: any) => {
+        const response = await apiClient.patch(`/advance-payments/${id}/`, data);
+        return response.data;
+    },
+    deleteAdvancePayment: async (id: number) => {
+        const response = await apiClient.delete(`/advance-payments/${id}/`);
+        return response.data;
     }
 };
 
