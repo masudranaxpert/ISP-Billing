@@ -108,7 +108,7 @@ class SubscriptionCreateView(generics.CreateAPIView):
                         date=fee.get('date') or timezone.now().date(),
                         is_paid=fee.get('is_paid', False),
                         notes=fee.get('notes', ''),
-                        received_by=request.user
+                        received_by=request.user if fee.get('is_paid', False) else None
                     )
                 except Exception as e:
                     # Log error but don't fail the subscription creation
@@ -236,7 +236,8 @@ class ConnectionFeeListCreateView(generics.ListCreateAPIView):
     ordering = ['-date']
 
     def perform_create(self, serializer):
-        serializer.save(received_by=self.request.user)
+        is_paid = serializer.validated_data.get('is_paid', False)
+        serializer.save(received_by=self.request.user if is_paid else None)
 
 
 @extend_schema(tags=['Subscriptions'])
@@ -247,6 +248,14 @@ class ConnectionFeeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ConnectionFee.objects.all()
     serializer_class = ConnectionFeeSerializer
     permission_classes = [IsAdminOrManager]
+
+    def perform_update(self, serializer):
+        is_paid = serializer.validated_data.get('is_paid', False)
+        # If becoming paid, set received_by
+        if is_paid and not serializer.instance.is_paid:
+            serializer.save(received_by=self.request.user)
+        else:
+            serializer.save()
 
 
 # ==================== Subscription Actions ====================

@@ -5,11 +5,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
-from .models import Zone, Customer
+from .models import Zone, Customer, ConnectionType
 from .serializers import (
     ZoneSerializer,
     CustomerSerializer, CustomerCreateSerializer,
-    CustomerUpdateSerializer, CustomerListSerializer
+    CustomerUpdateSerializer, CustomerListSerializer,
+    ConnectionTypeSerializer
 )
 from utils.permissions import IsAdminOrManager, IsAdmin
 
@@ -30,6 +31,7 @@ class ZoneListCreateView(generics.ListCreateAPIView):
     ordering = ['name']
 
 
+
 @extend_schema(tags=['Zones'])
 class ZoneDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -37,6 +39,30 @@ class ZoneDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Zone.objects.all()
     serializer_class = ZoneSerializer
+    permission_classes = [IsAdmin]
+
+
+# ==================== Connection Type Views ====================
+
+@extend_schema(tags=['Configuration'])
+class ConnectionTypeListCreateView(generics.ListCreateAPIView):
+    """
+    API endpoint to list and create connection types
+    """
+    queryset = ConnectionType.objects.all()
+    serializer_class = ConnectionTypeSerializer
+    permission_classes = [IsAdminOrManager]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ['name']
+
+
+@extend_schema(tags=['Configuration'])
+class ConnectionTypeDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    API endpoint to manage individual connection type
+    """
+    queryset = ConnectionType.objects.all()
+    serializer_class = ConnectionTypeSerializer
     permission_classes = [IsAdmin]
 
 

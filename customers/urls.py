@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     ZoneListCreateView, ZoneDetailView,
+    ConnectionTypeListCreateView, ConnectionTypeDetailView,
     CustomerListView, CustomerCreateView, CustomerDetailView,
     CustomerUpdateView, CustomerDeleteView, CustomerSearchView
 )
@@ -11,6 +12,10 @@ urlpatterns = [
     # Zone endpoints
     path('zones/', ZoneListCreateView.as_view(), name='zone_list_create'),
     path('zones/<int:pk>/', ZoneDetailView.as_view(), name='zone_detail'),
+    
+    # Connection Type endpoints
+    path('connection-types/', ConnectionTypeListCreateView.as_view(), name='connection_type_list_create'),
+    path('connection-types/<int:pk>/', ConnectionTypeDetailView.as_view(), name='connection_type_detail'),
     
     # Customer endpoints
     path('customers/', CustomerListView.as_view(), name='customer_list'),

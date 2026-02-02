@@ -1,5 +1,22 @@
 from rest_framework import serializers
-from .models import Zone, Customer
+from .models import Zone, Customer, ConnectionType
+
+
+class ConnectionTypeSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ConnectionType model
+    """
+    customer_count = serializers.IntegerField(read_only=True)
+    active_customer_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = ConnectionType
+        fields = [
+            'id', 'name', 'code', 'description', 'status', 
+            'customer_count', 'active_customer_count', 
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class ZoneSerializer(serializers.ModelSerializer):
@@ -25,7 +42,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     """
     zone_name = serializers.CharField(source='zone.name', read_only=True)
     billing_type_display = serializers.CharField(source='get_billing_type_display', read_only=True)
-    connection_type_display = serializers.CharField(source='get_connection_type_display', read_only=True)
+    connection_type_display = serializers.CharField(source='connection_type.name', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     full_address = serializers.CharField(read_only=True)
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
@@ -74,7 +91,8 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         Custom validation
         """
         # If connection type is static_ip, static_ip field is required
-        if attrs.get('connection_type') == 'static_ip' and not attrs.get('static_ip'):
+        connection_type = attrs.get('connection_type')
+        if connection_type and 'static' in connection_type.name.lower() and not attrs.get('static_ip'):
             raise serializers.ValidationError({
                 'static_ip': 'Static IP is required for Static IP connection type.'
             })
