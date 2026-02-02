@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Plus, Search, Eye, Pencil, Trash2, PlayCircle, PauseCircle, RefreshCw } from "lucide-react"
+import { Loader2, Plus, Search, Eye, Pencil, Trash2, RefreshCw } from "lucide-react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
 import {
     SidebarInset,
@@ -41,7 +41,7 @@ import { toast } from "sonner"
 function SubscriptionsPage() {
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
-    const [statusFilter] = useState(searchParams.get("status") || "")
+    const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "")
 
     const [subscriptions, setSubscriptions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
@@ -50,6 +50,11 @@ function SubscriptionsPage() {
     const [totalPages, setTotalPages] = useState(1)
     const [editingExpiryDay, setEditingExpiryDay] = useState<number | null>(null)
     const [expiryDayValue, setExpiryDayValue] = useState<string>("")
+
+    // Update status filter when URL changes
+    useEffect(() => {
+        setStatusFilter(searchParams.get("status") || "")
+    }, [searchParams])
 
     useEffect(() => {
         fetchSubscriptions()
@@ -327,7 +332,7 @@ function SubscriptionsPage() {
                                                                             onClick={() => navigate(`/subscriptions/${sub.id}`)}
                                                                             title="View"
                                                                         >
-                                                                            <Eye className="h-4 w-4" />
+                                                                            <Eye className="h-5 w-5" strokeWidth={2.5} />
                                                                         </Button>
                                                                         <Button
                                                                             variant="ghost"
@@ -335,35 +340,15 @@ function SubscriptionsPage() {
                                                                             onClick={() => navigate(`/subscriptions/${sub.id}/edit`)}
                                                                             title="Edit"
                                                                         >
-                                                                            <Pencil className="h-4 w-4" />
+                                                                            <Pencil className="h-5 w-5" strokeWidth={2.5} />
                                                                         </Button>
-                                                                        {sub.status === "suspended" && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() => handleActivate(sub.id)}
-                                                                                title="Activate"
-                                                                            >
-                                                                                <PlayCircle className="h-4 w-4 text-green-500" />
-                                                                            </Button>
-                                                                        )}
-                                                                        {sub.status === "active" && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() => handleSuspend(sub.id)}
-                                                                                title="Suspend"
-                                                                            >
-                                                                                <PauseCircle className="h-4 w-4 text-orange-500" />
-                                                                            </Button>
-                                                                        )}
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="icon"
                                                                             onClick={() => handleSync(sub.id)}
                                                                             title="Sync to MikroTik"
                                                                         >
-                                                                            <RefreshCw className="h-4 w-4 text-blue-500" />
+                                                                            <RefreshCw className="h-5 w-5 text-blue-500" strokeWidth={2.5} />
                                                                         </Button>
                                                                         <Button
                                                                             variant="ghost"
@@ -371,7 +356,7 @@ function SubscriptionsPage() {
                                                                             onClick={() => handleDelete(sub.id, sub.customer_name)}
                                                                             title="Delete"
                                                                         >
-                                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                                            <Trash2 className="h-5 w-5 text-destructive" strokeWidth={2.5} />
                                                                         </Button>
                                                                     </div>
                                                                 </TableCell>

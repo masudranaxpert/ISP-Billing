@@ -52,12 +52,8 @@ const data = {
           url: "/subscriptions?status=active",
         },
         {
-          title: "Suspended",
+          title: "Suspand",
           url: "/subscriptions?status=suspended",
-        },
-        {
-          title: "Expired",
-          url: "/subscriptions?status=expired",
         },
       ],
     },
