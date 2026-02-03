@@ -233,7 +233,7 @@ requires-dist = [
     { name = "routeros-api", specifier = ">=0.21.0" },
     { name = "uvicorn", specifier = ">=0.40.0" },
     { name = "whitenoise", specifier = ">=6.9.0" },
-    { name = "zenpulse-scheduler", specifier = "==0.1.1" },
+    { name = "zenpulse-scheduler", specifier = "==0.1.2" },
 ]
 
 [[package]]
@@ -611,13 +611,13 @@ wheels = [
 
 [[package]]
 name = "zenpulse-scheduler"
-version = "0.1.1"
+version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "apscheduler" },
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/4c/eb46459a015ce5c717978405e9c4924983ef9e9ae5081a16f03e5f99348f/zenpulse_scheduler-0.1.1.tar.gz", hash = "sha256:2185c8df2c5b81a213a75bbefa434c65f17a1323bba11ac6006dfe1a05997c01", size = 13371, upload-time = "2026-02-01T13:43:09.034Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1b/fd/84261d2a72afde7e2ba5db895eef950364951a9cee1df5c8dc8c604e8a6a/zenpulse_scheduler-0.1.2.tar.gz", hash = "sha256:f4c3174ee1136fe754296159ee1489a81e79df6d1c3174b9143b0d86976f0de3", size = 14044, upload-time = "2026-02-03T15:15:34.136Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/21/4141c71e5a539a1f8b5c38514703df2edb00a4f68f934f587d3f009eae5d/zenpulse_scheduler-0.1.1-py3-none-any.whl", hash = "sha256:f291cd09e2d9b4c71ae58daa35bc1874d56c3999121955a095278519681f684f", size = 11117, upload-time = "2026-02-01T13:43:08.149Z" },
+    { url = "https://files.pythonhosted.org/packages/47/69/521b3ccbaca26ae1ac16445d0e805914d30b42cf2325b24b554fc2016bca/zenpulse_scheduler-0.1.2-py3-none-any.whl", hash = "sha256:1d85790df4fa95afa45cca3abe936d3d455a51b8d35a69eceb1c511abdc75714", size = 12428, upload-time = "2026-02-03T15:15:33.076Z" },
 ]
